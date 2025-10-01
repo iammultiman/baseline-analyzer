@@ -1,0 +1,249 @@
+# Alerting Policies for Baseline Analyzer Production Environment
+
+policies:
+  # High Error Rate Alert
+  - displayName: "Baseline Analyzer - High Error Rate"
+    documentation:
+      content: "Alert when error rate exceeds 5% for 5 minutes"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "High Error Rate"
+        conditionThreshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="baseline-analyzer-api" AND metric.type="run.googleapis.com/request_count"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 0.05
+          duration: 300s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_RATE
+              crossSeriesReducer: REDUCE_SUM
+              groupByFields:
+                - "metric.labels.response_code_class"
+    combiner: OR
+    enabled: true
+    notificationChannels: [] # Add notification channel IDs
+    alertStrategy:
+      autoClose: 86400s
+
+  # High Response Latency Alert
+  - displayName: "Baseline Analyzer - High Response Latency"
+    documentation:
+      content: "Alert when 95th percentile response latency exceeds 5 seconds"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "High Latency"
+        conditionThreshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="baseline-analyzer-api" AND metric.type="run.googleapis.com/request_latencies"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 5000
+          duration: 300s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_DELTA
+              crossSeriesReducer: REDUCE_PERCENTILE_95
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+    alertStrategy:
+      autoClose: 86400s
+
+  # Database Connection Issues
+  - displayName: "Baseline Analyzer - Database Connection Issues"
+    documentation:
+      content: "Alert when database connections exceed 80% of limit or connection errors occur"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "High Database Connections"
+        conditionThreshold:
+          filter: 'resource.type="cloudsql_database" AND metric.type="cloudsql.googleapis.com/database/postgresql/num_backends"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 80
+          duration: 300s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_MEAN
+              crossSeriesReducer: REDUCE_SUM
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+  # Memory Usage Alert
+  - displayName: "Baseline Analyzer - High Memory Usage"
+    documentation:
+      content: "Alert when memory utilization exceeds 85% for 10 minutes"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "High Memory Usage"
+        conditionThreshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="baseline-analyzer-api" AND metric.type="run.googleapis.com/container/memory/utilizations"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 0.85
+          duration: 600s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_MEAN
+              crossSeriesReducer: REDUCE_MEAN
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+  # CPU Usage Alert
+  - displayName: "Baseline Analyzer - High CPU Usage"
+    documentation:
+      content: "Alert when CPU utilization exceeds 80% for 10 minutes"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "High CPU Usage"
+        conditionThreshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="baseline-analyzer-api" AND metric.type="run.googleapis.com/container/cpu/utilizations"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 0.80
+          duration: 600s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_MEAN
+              crossSeriesReducer: REDUCE_MEAN
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+  # Service Unavailable Alert
+  - displayName: "Baseline Analyzer - Service Unavailable"
+    documentation:
+      content: "Alert when health check fails or service is unreachable"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "Health Check Failure"
+        conditionThreshold:
+          filter: 'resource.type="uptime_check_id" AND metric.type="monitoring.googleapis.com/uptime_check/check_passed"'
+          comparison: COMPARISON_EQUAL
+          thresholdValue: 0
+          duration: 180s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_FRACTION_TRUE
+              crossSeriesReducer: REDUCE_MEAN
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+  # AI Provider Failures
+  - displayName: "Baseline Analyzer - AI Provider Failures"
+    documentation:
+      content: "Alert when AI provider API calls fail consistently"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "AI Provider Errors"
+        conditionThreshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="baseline-analyzer-api" AND metric.type="logging.googleapis.com/user/ai_provider_errors"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 10
+          duration: 300s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_RATE
+              crossSeriesReducer: REDUCE_SUM
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+  # Payment Processing Failures
+  - displayName: "Baseline Analyzer - Payment Processing Failures"
+    documentation:
+      content: "Alert when payment processing fails consistently"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "Payment Failures"
+        conditionThreshold:
+          filter: 'resource.type="cloud_run_revision" AND resource.labels.service_name="baseline-analyzer-api" AND metric.type="logging.googleapis.com/user/payment_failures"'
+          comparison: COMPARISON_GREATER_THAN
+          thresholdValue: 5
+          duration: 300s
+          aggregations:
+            - alignmentPeriod: 60s
+              perSeriesAligner: ALIGN_RATE
+              crossSeriesReducer: REDUCE_SUM
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+  # Low Credit Balance Alert (Business Logic)
+  - displayName: "Baseline Analyzer - System Credit Balance Low"
+    documentation:
+      content: "Alert when system-wide credit balance is running low"
+      mimeType: "text/markdown"
+    conditions:
+      - displayName: "Low System Credits"
+        conditionThreshold:
+          filter: 'resource.type="gce_instance" AND metric.type="custom.googleapis.com/baseline_analyzer/system_credit_balance"'
+          comparison: COMPARISON_LESS_THAN
+          thresholdValue: 1000
+          duration: 300s
+          aggregations:
+            - alignmentPeriod: 300s
+              perSeriesAligner: ALIGN_MEAN
+              crossSeriesReducer: REDUCE_SUM
+    combiner: OR
+    enabled: true
+    notificationChannels: []
+
+# Notification Channels Configuration
+notification_channels:
+  - type: "email"
+    displayName: "Production Alerts Email"
+    description: "Email notifications for production alerts"
+    labels:
+      email_address: "alerts@your-domain.com"
+    enabled: true
+
+  - type: "slack"
+    displayName: "Production Alerts Slack"
+    description: "Slack notifications for production alerts"
+    labels:
+      channel_name: "#production-alerts"
+      url: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+    enabled: true
+
+  - type: "pagerduty"
+    displayName: "Production Critical Alerts PagerDuty"
+    description: "PagerDuty notifications for critical production alerts"
+    labels:
+      service_key: "YOUR_PAGERDUTY_SERVICE_KEY"
+    enabled: true
+
+# Uptime Checks Configuration
+uptime_checks:
+  - displayName: "Baseline Analyzer API Health Check"
+    monitoredResource:
+      type: "uptime_url"
+      labels:
+        project_id: "PROJECT_ID"
+        host: "api-baseline-analyzer-[hash]-uc.a.run.app"
+    httpCheck:
+      path: "/api/health"
+      port: 443
+      useSsl: true
+      validateSsl: true
+    period: 60s
+    timeout: 10s
+    selectedRegions:
+      - "USA_OREGON"
+      - "USA_VIRGINIA"
+      - "EUROPE_IRELAND"
+
+  - displayName: "Baseline Analyzer Frontend Health Check"
+    monitoredResource:
+      type: "uptime_url"
+      labels:
+        project_id: "PROJECT_ID"
+        host: "baseline-analyzer.web.app"
+    httpCheck:
+      path: "/"
+      port: 443
+      useSsl: true
+      validateSsl: true
+    period: 300s
+    timeout: 10s
+    selectedRegions:
+      - "USA_OREGON"
+      - "EUROPE_IRELAND"

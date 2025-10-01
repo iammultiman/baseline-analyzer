@@ -1,0 +1,260 @@
+# Cloud Logging Configuration for Baseline Analyzer
+
+# Log Sinks Configuration
+sinks:
+  # Error Logs Sink
+  - name: "baseline-analyzer-errors"
+    destination: "logging.googleapis.com/projects/PROJECT_ID/logs/baseline-analyzer-errors"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND (severity="ERROR" OR severity="CRITICAL")
+    description: "Sink for error and critical logs from Baseline Analyzer"
+
+  # Business Events Sink
+  - name: "baseline-analyzer-business-events"
+    destination: "logging.googleapis.com/projects/PROJECT_ID/logs/baseline-analyzer-business"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND (
+        jsonPayload.event_type="analysis_completed"
+        OR jsonPayload.event_type="credit_transaction"
+        OR jsonPayload.event_type="user_registration"
+        OR jsonPayload.event_type="payment_processed"
+      )
+    description: "Sink for business events from Baseline Analyzer"
+
+  # Security Events Sink
+  - name: "baseline-analyzer-security-events"
+    destination: "logging.googleapis.com/projects/PROJECT_ID/logs/baseline-analyzer-security"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND (
+        jsonPayload.event_type="authentication_failure"
+        OR jsonPayload.event_type="authorization_failure"
+        OR jsonPayload.event_type="suspicious_activity"
+        OR jsonPayload.event_type="rate_limit_exceeded"
+      )
+    description: "Sink for security-related events from Baseline Analyzer"
+
+  # Performance Logs Sink
+  - name: "baseline-analyzer-performance"
+    destination: "logging.googleapis.com/projects/PROJECT_ID/logs/baseline-analyzer-performance"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND (
+        jsonPayload.event_type="slow_query"
+        OR jsonPayload.event_type="high_memory_usage"
+        OR jsonPayload.event_type="analysis_timeout"
+        OR jsonPayload.response_time_ms > 5000
+      )
+    description: "Sink for performance-related logs from Baseline Analyzer"
+
+# Log-based Metrics Configuration
+metrics:
+  # Error Rate Metric
+  - name: "baseline_analyzer_error_rate"
+    description: "Rate of errors in Baseline Analyzer"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND severity="ERROR"
+    labelExtractors:
+      error_type: "EXTRACT(jsonPayload.error_type)"
+      endpoint: "EXTRACT(httpRequest.requestUrl)"
+
+  # Analysis Completion Metric
+  - name: "baseline_analyzer_analyses_completed"
+    description: "Count of completed analyses"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="analysis_completed"
+    labelExtractors:
+      success: "EXTRACT(jsonPayload.success)"
+      ai_provider: "EXTRACT(jsonPayload.ai_provider)"
+      analysis_type: "EXTRACT(jsonPayload.analysis_type)"
+
+  # Credit Transaction Metric
+  - name: "baseline_analyzer_credit_transactions"
+    description: "Count of credit transactions"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="credit_transaction"
+    labelExtractors:
+      transaction_type: "EXTRACT(jsonPayload.transaction_type)"
+      success: "EXTRACT(jsonPayload.success)"
+      amount: "EXTRACT(jsonPayload.amount)"
+
+  # Authentication Failure Metric
+  - name: "baseline_analyzer_auth_failures"
+    description: "Count of authentication failures"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="authentication_failure"
+    labelExtractors:
+      failure_reason: "EXTRACT(jsonPayload.failure_reason)"
+      user_agent: "EXTRACT(httpRequest.userAgent)"
+
+  # AI Provider Error Metric
+  - name: "baseline_analyzer_ai_provider_errors"
+    description: "Count of AI provider API errors"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="ai_provider_error"
+    labelExtractors:
+      provider: "EXTRACT(jsonPayload.provider)"
+      error_code: "EXTRACT(jsonPayload.error_code)"
+
+  # Database Error Metric
+  - name: "baseline_analyzer_database_errors"
+    description: "Count of database errors"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="database_error"
+    labelExtractors:
+      operation: "EXTRACT(jsonPayload.operation)"
+      table: "EXTRACT(jsonPayload.table)"
+
+  # Payment Processing Metric
+  - name: "baseline_analyzer_payment_events"
+    description: "Count of payment processing events"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="payment_processed"
+    labelExtractors:
+      success: "EXTRACT(jsonPayload.success)"
+      payment_method: "EXTRACT(jsonPayload.payment_method)"
+      amount: "EXTRACT(jsonPayload.amount)"
+
+  # Slow Query Metric
+  - name: "baseline_analyzer_slow_queries"
+    description: "Count of slow database queries"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND jsonPayload.event_type="slow_query"
+    labelExtractors:
+      query_type: "EXTRACT(jsonPayload.query_type)"
+      duration_ms: "EXTRACT(jsonPayload.duration_ms)"
+
+# Log Retention Configuration
+retention:
+  # Default retention for all logs
+  default_retention_days: 30
+  
+  # Extended retention for specific log types
+  extended_retention:
+    - log_name: "baseline-analyzer-security"
+      retention_days: 90
+    - log_name: "baseline-analyzer-business"
+      retention_days: 365
+    - log_name: "baseline-analyzer-errors"
+      retention_days: 60
+
+# Log Export Configuration (for long-term storage)
+exports:
+  # Export to BigQuery for analytics
+  - name: "baseline-analyzer-bigquery-export"
+    destination: "bigquery.googleapis.com/projects/PROJECT_ID/datasets/baseline_analyzer_logs"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+    description: "Export all Baseline Analyzer logs to BigQuery for analytics"
+
+  # Export to Cloud Storage for archival
+  - name: "baseline-analyzer-storage-export"
+    destination: "storage.googleapis.com/PROJECT_ID-baseline-analyzer-logs"
+    filter: |
+      resource.type="cloud_run_revision"
+      AND resource.labels.service_name="baseline-analyzer-api"
+      AND severity="ERROR"
+    description: "Export error logs to Cloud Storage for long-term archival"
+
+# Structured Logging Guidelines
+structured_logging:
+  required_fields:
+    - timestamp
+    - level
+    - message
+    - service
+    - version
+    - trace_id
+    - user_id (when applicable)
+    - organization_id (when applicable)
+
+  event_types:
+    - analysis_started
+    - analysis_completed
+    - analysis_failed
+    - credit_transaction
+    - user_registration
+    - user_login
+    - payment_processed
+    - ai_provider_error
+    - database_error
+    - authentication_failure
+    - authorization_failure
+    - rate_limit_exceeded
+    - slow_query
+    - high_memory_usage
+    - analysis_timeout
+
+  log_levels:
+    - DEBUG: Detailed information for debugging
+    - INFO: General information about application flow
+    - WARNING: Something unexpected happened but application continues
+    - ERROR: Error occurred but application can continue
+    - CRITICAL: Serious error occurred, application may not continue
+
+# Sample Log Formats
+sample_logs:
+  business_event:
+    timestamp: "2024-01-01T12:00:00Z"
+    level: "INFO"
+    message: "Analysis completed successfully"
+    service: "baseline-analyzer"
+    version: "1.0.0"
+    event_type: "analysis_completed"
+    trace_id: "abc123"
+    user_id: "user_123"
+    organization_id: "org_456"
+    analysis_id: "analysis_789"
+    duration_ms: 45000
+    ai_provider: "openai"
+    success: true
+
+  error_event:
+    timestamp: "2024-01-01T12:00:00Z"
+    level: "ERROR"
+    message: "AI provider API call failed"
+    service: "baseline-analyzer"
+    version: "1.0.0"
+    event_type: "ai_provider_error"
+    trace_id: "def456"
+    user_id: "user_123"
+    provider: "openai"
+    error_code: "rate_limit_exceeded"
+    retry_count: 3
+    stack_trace: "Error: Rate limit exceeded..."
+
+  security_event:
+    timestamp: "2024-01-01T12:00:00Z"
+    level: "WARNING"
+    message: "Authentication failure detected"
+    service: "baseline-analyzer"
+    version: "1.0.0"
+    event_type: "authentication_failure"
+    trace_id: "ghi789"
+    ip_address: "192.168.1.1"
+    user_agent: "Mozilla/5.0..."
+    failure_reason: "invalid_credentials"
+    attempt_count: 3

@@ -1,36 +1,127 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Baseline Analyzer
+
+AI-powered code repository analysis against web platform baseline standards. This Progressive Web Application helps developers understand their code's compatibility with modern web standards and provides actionable recommendations for improvement.
+
+## Features
+
+- 🔍 **Repository Analysis**: Submit GitHub/GitLab URLs for comprehensive analysis
+- 🤖 **AI-Powered Insights**: Leverages multiple AI providers (OpenAI, Gemini, Claude, etc.)
+- 📊 **Baseline Compliance**: Analyzes against current web.dev baseline data
+- 💳 **Credit-Based Pricing**: Pay-as-you-go model with transparent costs
+- 👥 **Multi-Tenancy**: Organization and team management
+- 📱 **Progressive Web App**: Works offline with mobile-first design
+- 🔧 **CI/CD Integration**: API endpoints for automated analysis
+
+## Tech Stack
+
+- **Frontend**: Next.js 14, TypeScript, Tailwind CSS, PWA
+- **Backend**: Next.js API Routes, Cloud Run
+- **Database**: Cloud SQL (PostgreSQL) with pgvector
+- **Authentication**: Firebase Auth
+- **Hosting**: Firebase Hosting + Google Cloud Platform
+- **AI Providers**: OpenRouter, OpenAI, Google Gemini, Claude, Qwen
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
+- Node.js 18+
+- Google Cloud Platform account
+- Firebase project
+
+### Installation
+
+1. Clone the repository:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <repository-url>
+cd baseline-analyzer
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Install dependencies:
+```bash
+npm install
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Set up environment variables:
+```bash
+cp .env.local.example .env.local
+# Edit .env.local with your configuration
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Set up Google Cloud Platform:
+```bash
+npm run setup:gcp your-project-id
+```
 
-## Learn More
+5. Initialize Firebase:
+```bash
+firebase init
+```
 
-To learn more about Next.js, take a look at the following resources:
+6. Start development server:
+```bash
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Development
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+- **Local Development**: `npm run dev`
+- **Firebase Emulators**: `npm run emulators`
+- **Build**: `npm run build`
+- **Lint**: `npm run lint`
 
-## Deploy on Vercel
+### Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Firebase Hosting**: `npm run deploy:firebase`
+- **Google Cloud Run**: `npm run deploy:gcp`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Project Structure
+
+```
+baseline-analyzer/
+├── src/
+│   ├── app/                 # Next.js App Router
+│   ├── components/          # React components
+│   ├── lib/                 # Utilities and configurations
+│   └── types/               # TypeScript type definitions
+├── public/                  # Static assets
+├── scripts/                 # Deployment and setup scripts
+├── firebase.json            # Firebase configuration
+├── cloudbuild.yaml          # Google Cloud Build configuration
+└── Dockerfile               # Container configuration
+```
+
+## Configuration
+
+### Environment Variables
+
+See `.env.local.example` for required environment variables:
+
+- Firebase configuration
+- Google Cloud settings
+- Database connection
+- AI provider API keys
+
+### Google Cloud APIs
+
+The following APIs need to be enabled:
+- Cloud Build API
+- Cloud Run API
+- Cloud SQL Admin API
+- Cloud Functions API
+- Secret Manager API
+- Container Registry API
+- Firebase API
+- Firestore API
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.

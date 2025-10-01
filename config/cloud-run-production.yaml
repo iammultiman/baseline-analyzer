@@ -1,0 +1,214 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: baseline-analyzer-api
+  annotations:
+    run.googleapis.com/ingress: all
+    run.googleapis.com/execution-environment: gen2
+    run.googleapis.com/cpu-throttling: "false"
+  labels:
+    app: baseline-analyzer
+    env: production
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/execution-environment: gen2
+        run.googleapis.com/cpu-throttling: "false"
+        autoscaling.knative.dev/maxScale: "100"
+        autoscaling.knative.dev/minScale: "1"
+        run.googleapis.com/vpc-access-connector: baseline-analyzer-connector
+        run.googleapis.com/vpc-access-egress: private-ranges-only
+    spec:
+      serviceAccountName: baseline-analyzer@PROJECT_ID.iam.gserviceaccount.com
+      containerConcurrency: 80
+      timeoutSeconds: 300
+      containers:
+      - name: baseline-analyzer-api
+        image: gcr.io/PROJECT_ID/baseline-analyzer-api:latest
+        ports:
+        - name: http1
+          containerPort: 3000
+        env:
+        # Database Configuration
+        - name: DATABASE_URL
+          valueFrom:
+            secretKeyRef:
+              name: database-url
+              key: latest
+        - name: DATABASE_SSL_MODE
+          value: "require"
+        
+        # AI Provider Configuration
+        - name: OPENAI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openai-api-key
+              key: latest
+        - name: GEMINI_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gemini-api-key
+              key: latest
+        - name: CLAUDE_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: claude-api-key
+              key: latest
+        - name: QWEN_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: qwen-api-key
+              key: latest
+        - name: OPENROUTER_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: openrouter-api-key
+              key: latest
+        
+        # Email Service Configuration
+        - name: SENDGRID_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: sendgrid-api-key
+              key: latest
+        - name: SMTP_HOST
+          value: "smtp.sendgrid.net"
+        - name: SMTP_PORT
+          value: "587"
+        - name: SMTP_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: smtp-username
+              key: latest
+        - name: SMTP_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: smtp-password
+              key: latest
+        
+        # Payment Processor Configuration
+        - name: STRIPE_SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: stripe-secret-key
+              key: latest
+        - name: STRIPE_WEBHOOK_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: stripe-webhook-secret
+              key: latest
+        - name: PAYPAL_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: paypal-client-secret
+              key: latest
+        
+        # Application Security
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: jwt-secret
+              key: latest
+        - name: SESSION_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: session-secret
+              key: latest
+        - name: API_ENCRYPTION_KEY
+          valueFrom:
+            secretKeyRef:
+              name: api-encryption-key
+              key: latest
+        
+        # Firebase Configuration
+        - name: FIREBASE_ADMIN_KEY
+          valueFrom:
+            secretKeyRef:
+              name: firebase-admin-key
+              key: latest
+        - name: FIREBASE_CONFIG
+          valueFrom:
+            secretKeyRef:
+              name: firebase-config
+              key: latest
+        
+        # External Services
+        - name: GITINGEST_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: gitingest-api-key
+              key: latest
+        - name: WEBHOOK_SIGNING_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: webhook-signing-secret
+              key: latest
+        
+        # Application Configuration
+        - name: NODE_ENV
+          value: "production"
+        - name: NEXT_PUBLIC_APP_URL
+          value: "https://baseline-analyzer.web.app"
+        - name: GOOGLE_CLOUD_REGION
+          value: "us-central1"
+        - name: LOG_LEVEL
+          value: "info"
+        - name: ENABLE_CLOUD_LOGGING
+          value: "true"
+        - name: ENABLE_CLOUD_MONITORING
+          value: "true"
+        - name: MAX_CONCURRENT_ANALYSES
+          value: "10"
+        - name: ANALYSIS_TIMEOUT_MS
+          value: "300000"
+        - name: DATABASE_POOL_SIZE
+          value: "20"
+        - name: REDIS_CACHE_TTL
+          value: "3600"
+        - name: CORS_ORIGINS
+          value: "https://baseline-analyzer.web.app,https://baseline-analyzer.firebaseapp.com"
+        - name: RATE_LIMIT_WINDOW_MS
+          value: "900000"
+        - name: RATE_LIMIT_MAX_REQUESTS
+          value: "100"
+        - name: ENABLE_AUDIT_LOGGING
+          value: "true"
+        
+        resources:
+          limits:
+            cpu: "2000m"
+            memory: "4Gi"
+          requests:
+            cpu: "1000m"
+            memory: "2Gi"
+        
+        livenessProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 30
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        
+        readinessProbe:
+          httpGet:
+            path: /api/health/ready
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        
+        startupProbe:
+          httpGet:
+            path: /api/health
+            port: 3000
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 30
+  traffic:
+  - percent: 100
+    latestRevision: true

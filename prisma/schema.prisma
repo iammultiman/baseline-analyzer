@@ -1,0 +1,265 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                   String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  email                String    @unique @db.VarChar(255)
+  displayName          String?   @map("display_name") @db.VarChar(255)
+  photoUrl             String?   @map("photo_url") @db.Text
+  createdAt            DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  lastLoginAt          DateTime? @map("last_login_at") @db.Timestamp(6)
+  creditBalance        Int       @default(0) @map("credit_balance")
+  organizationId       String?   @map("organization_id") @db.Uuid
+  role                 UserRole  @default(MEMBER)
+  notificationSettings Json?     @map("notification_settings")
+
+  // Relations
+  organization         Organization?        @relation(fields: [organizationId], references: [id])
+  ownedOrganizations   Organization[]       @relation("OrganizationOwner")
+  repositoryAnalyses   RepositoryAnalysis[]
+  creditTransactions   CreditTransaction[]
+  invitations          Invitation[]
+  createdApiKeys       ApiKey[]             @relation("ApiKeyCreator")
+
+  @@map("users")
+}
+
+model Organization {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @db.VarChar(255)
+  slug      String   @unique @db.VarChar(100)
+  ownerId   String   @map("owner_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamp(6)
+  settings  Json     @default("{}")
+
+  // Relations
+  owner              User                 @relation("OrganizationOwner", fields: [ownerId], references: [id])
+  members            User[]
+  repositoryAnalyses RepositoryAnalysis[]
+  invitations        Invitation[]
+  aiProviderConfigs  AIProviderConfig[]
+  apiKeys            ApiKey[]
+  webhooks           Webhook[]
+
+  @@map("organizations")
+}
+
+model RepositoryAnalysis {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String           @map("user_id") @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  repositoryUrl  String           @map("repository_url") @db.Text
+  repositoryName String?          @map("repository_name") @db.VarChar(255)
+  analysisDate   DateTime         @default(now()) @map("analysis_date") @db.Timestamp(6)
+  status         AnalysisStatus   @default(PENDING)
+  creditsCost    Int?             @map("credits_cost")
+  results        Json?
+  metadata       Json?
+
+  // Relations
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("repository_analyses")
+}
+
+model BaselineData {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  feature         String    @db.VarChar(255)
+  category        String?   @db.VarChar(100)
+  status          String?   @db.VarChar(20)
+  description     String?   @db.Text
+  documentation   String?   @db.Text
+  browserSupport  Json?     @map("browser_support")
+  lastUpdated     DateTime  @default(now()) @map("last_updated") @db.Timestamp(6)
+  embedding       Unsupported("vector(1536)")?
+
+  @@map("baseline_data")
+}
+
+model CreditTransaction {
+  id            String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId        String            @map("user_id") @db.Uuid
+  type          TransactionType
+  amount        Int
+  description   String?           @db.Text
+  createdAt     DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+  metadata      Json?
+
+  // Relations
+  user User @relation(fields: [userId], references: [id])
+
+  @@map("credit_transactions")
+}
+
+model Invitation {
+  id             String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String           @map("organization_id") @db.Uuid
+  inviterId      String           @map("inviter_id") @db.Uuid
+  email          String           @db.VarChar(255)
+  role           UserRole         @default(MEMBER)
+  token          String           @unique @db.VarChar(255)
+  status         InvitationStatus @default(PENDING)
+  createdAt      DateTime         @default(now()) @map("created_at") @db.Timestamp(6)
+  expiresAt      DateTime         @map("expires_at") @db.Timestamp(6)
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  inviter      User         @relation(fields: [inviterId], references: [id])
+
+  @@map("invitations")
+}
+
+model AIProviderConfig {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  provider       AIProvider
+  name           String        @db.VarChar(255)
+  apiKey         String        @map("api_key") @db.Text
+  baseUrl        String?       @map("base_url") @db.Text
+  model          String?       @db.VarChar(255)
+  maxTokens      Int?          @map("max_tokens")
+  temperature    Float?        @default(0.7)
+  isEnabled      Boolean       @default(true) @map("is_enabled")
+  priority       Int           @default(1) // Lower number = higher priority
+  costPerToken   Float?        @map("cost_per_token") // Cost per 1000 tokens
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([organizationId, provider, name])
+  @@map("ai_provider_configs")
+}
+
+model ApiKey {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  name           String    @db.VarChar(255)
+  keyHash        String    @unique @map("key_hash") @db.VarChar(255)
+  keyPrefix      String    @map("key_prefix") @db.VarChar(20)
+  permissions    String[]  @default(["analysis:read", "analysis:write"])
+  isActive       Boolean   @default(true) @map("is_active")
+  lastUsedAt     DateTime? @map("last_used_at") @db.Timestamp(6)
+  expiresAt      DateTime? @map("expires_at") @db.Timestamp(6)
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamp(6)
+  createdBy      String    @map("created_by") @db.Uuid
+
+  // Relations
+  organization Organization @relation(fields: [organizationId], references: [id])
+  creator      User         @relation("ApiKeyCreator", fields: [createdBy], references: [id])
+
+  @@map("api_keys")
+}
+
+model Webhook {
+  id             String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  organizationId String        @map("organization_id") @db.Uuid
+  url            String        @db.Text
+  events         String[]      @default(["analysis.completed", "analysis.failed"])
+  secret         String?       @db.VarChar(255)
+  isActive       Boolean       @default(true) @map("is_active")
+  createdAt      DateTime      @default(now()) @map("created_at") @db.Timestamp(6)
+  updatedAt      DateTime      @updatedAt @map("updated_at") @db.Timestamp(6)
+
+  // Relations
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  deliveries     WebhookDelivery[]
+
+  @@map("webhooks")
+}
+
+model WebhookDelivery {
+  id           String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  webhookId    String            @map("webhook_id") @db.Uuid
+  event        String            @db.VarChar(100)
+  payload      Json
+  status       WebhookStatus     @default(PENDING)
+  attempts     Int               @default(0)
+  lastAttempt  DateTime?         @map("last_attempt") @db.Timestamp(6)
+  nextAttempt  DateTime?         @map("next_attempt") @db.Timestamp(6)
+  response     Json?
+  createdAt    DateTime          @default(now()) @map("created_at") @db.Timestamp(6)
+
+  // Relations
+  webhook Webhook @relation(fields: [webhookId], references: [id])
+
+  @@map("webhook_deliveries")
+}
+
+// Enums
+enum UserRole {
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum AnalysisStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionType {
+  PURCHASE
+  DEDUCTION
+  REFUND
+  BONUS
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+enum AIProvider {
+  OPENAI
+  GEMINI
+  CLAUDE
+  QWEN
+  OPENROUTER
+}
+
+enum WebhookStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RETRYING
+}
+
+model AuditLog {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String?   @map("user_id") @db.Uuid
+  organizationId String?   @map("organization_id") @db.Uuid
+  action         String    @db.VarChar(100)
+  resource       String    @db.VarChar(100)
+  resourceId     String?   @map("resource_id") @db.Text
+  details        Json      @default("{}")
+  ipAddress      String?   @map("ip_address") @db.VarChar(45)
+  userAgent      String?   @map("user_agent") @db.Text
+  success        Boolean   @default(true)
+  errorMessage   String?   @map("error_message") @db.Text
+  metadata       Json      @default("{}")
+  timestamp      DateTime  @default(now()) @db.Timestamp(6)
+
+  @@index([userId])
+  @@index([organizationId])
+  @@index([action])
+  @@index([resource])
+  @@index([timestamp])
+  @@index([success])
+  @@map("audit_logs")
+}

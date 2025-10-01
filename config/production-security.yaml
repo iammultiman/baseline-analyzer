@@ -1,0 +1,289 @@
+# Production Security Configuration
+# This file defines security policies and configurations for production deployment
+
+# CORS Configuration
+cors:
+  enabled: true
+  allowedOrigins:
+    - "https://baseline-analyzer.web.app"
+    - "https://baseline-analyzer.firebaseapp.com"
+    # Add custom domains here
+    # - "https://your-custom-domain.com"
+  allowedMethods:
+    - "GET"
+    - "POST"
+    - "PUT"
+    - "DELETE"
+    - "OPTIONS"
+    - "PATCH"
+  allowedHeaders:
+    - "Content-Type"
+    - "Authorization"
+    - "X-Requested-With"
+    - "Accept"
+    - "Origin"
+    - "X-API-Key"
+    - "X-Organization-ID"
+    - "X-Trace-ID"
+  maxAge: 86400 # 24 hours
+  credentials: true
+
+# Rate Limiting Configuration
+rateLimiting:
+  enabled: true
+  rules:
+    # Authentication endpoints
+    - path: "/api/auth"
+      windowMs: 900000 # 15 minutes
+      maxRequests: 5
+      message: "Too many authentication attempts"
+    
+    # Analysis endpoints
+    - path: "/api/analysis"
+      windowMs: 900000 # 15 minutes
+      maxRequests: 10
+      message: "Analysis rate limit exceeded"
+    
+    # Credit purchase endpoints
+    - path: "/api/credits/purchase"
+      windowMs: 3600000 # 1 hour
+      maxRequests: 3
+      message: "Purchase rate limit exceeded"
+    
+    # CI/CD endpoints
+    - path: "/api/cicd"
+      windowMs: 60000 # 1 minute
+      maxRequests: 30
+      message: "CI/CD rate limit exceeded"
+    
+    # Admin endpoints
+    - path: "/api/admin"
+      windowMs: 300000 # 5 minutes
+      maxRequests: 20
+      message: "Admin rate limit exceeded"
+    
+    # General API endpoints
+    - path: "/api"
+      windowMs: 900000 # 15 minutes
+      maxRequests: 100
+      message: "API rate limit exceeded"
+
+# DDoS Protection Configuration
+ddosProtection:
+  enabled: true
+  maxRequestsPerMinute: 1000
+  suspiciousUserAgents:
+    - "sqlmap"
+    - "nikto"
+    - "nmap"
+    - "masscan"
+    - "gobuster"
+    - "dirb"
+    - "wfuzz"
+  blockedPatterns:
+    - "bot"
+    - "crawler"
+    - "spider"
+    - "scraper"
+  whitelistedIPs:
+    # Add trusted IPs here
+    # - "203.0.113.0/24"
+  blacklistedIPs:
+    # Add blocked IPs here
+    # - "198.51.100.0/24"
+
+# Security Headers Configuration
+securityHeaders:
+  enabled: true
+  headers:
+    "X-Content-Type-Options": "nosniff"
+    "X-Frame-Options": "DENY"
+    "X-XSS-Protection": "1; mode=block"
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+    "Permissions-Policy": "camera=(), microphone=(), geolocation=()"
+    "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload"
+  contentSecurityPolicy:
+    "default-src": "'self'"
+    "script-src": "'self' 'unsafe-inline' 'unsafe-eval' https://www.gstatic.com https://apis.google.com https://js.stripe.com"
+    "style-src": "'self' 'unsafe-inline' https://fonts.googleapis.com"
+    "font-src": "'self' https://fonts.gstatic.com"
+    "img-src": "'self' data: https: blob:"
+    "connect-src": "'self' https://api.openai.com https://generativelanguage.googleapis.com https://api.anthropic.com https://openrouter.ai https://api.stripe.com"
+    "frame-src": "'self' https://js.stripe.com"
+    "object-src": "'none'"
+    "base-uri": "'self'"
+    "form-action": "'self'"
+
+# Audit Logging Configuration
+auditLogging:
+  enabled: true
+  logLevel: "info"
+  sensitiveOperations:
+    - "authentication"
+    - "authorization"
+    - "payment_processing"
+    - "admin_configuration"
+    - "data_access"
+    - "api_key_usage"
+  retentionDays: 2555 # 7 years for compliance
+  exportFormat: "json"
+  destinations:
+    - "cloud_logging"
+    - "database"
+    - "backup_storage"
+
+# Input Validation Configuration
+inputValidation:
+  enabled: true
+  maxStringLength: 10000
+  maxNumberValue: 999999999
+  allowedFileTypes:
+    - "application/json"
+    - "text/plain"
+    - "application/pdf"
+  maxFileSize: 10485760 # 10MB
+  sanitization:
+    removeHtml: true
+    removeScripts: true
+    removeEventHandlers: true
+
+# Backup and Recovery Configuration
+backupRecovery:
+  enabled: true
+  schedule:
+    database: "0 2 * * *" # Daily at 2 AM
+    logs: "0 4 * * *" # Daily at 4 AM
+    configuration: "0 6 * * 0" # Weekly on Sunday at 6 AM
+  retention:
+    database: 30 # days
+    logs: 90 # days
+    configuration: 365 # days
+  encryption: true
+  crossRegionReplication: true
+  testRestoration:
+    frequency: "monthly"
+    alertOnFailure: true
+
+# Monitoring and Alerting Configuration
+monitoring:
+  enabled: true
+  metrics:
+    - "request_rate"
+    - "error_rate"
+    - "response_time"
+    - "security_events"
+    - "audit_events"
+    - "backup_status"
+  alerts:
+    - name: "High Error Rate"
+      condition: "error_rate > 5%"
+      duration: "5m"
+      severity: "warning"
+    
+    - name: "Security Event Spike"
+      condition: "security_events > 10/min"
+      duration: "1m"
+      severity: "critical"
+    
+    - name: "Backup Failure"
+      condition: "backup_failed == true"
+      duration: "0s"
+      severity: "critical"
+    
+    - name: "DDoS Attack"
+      condition: "request_rate > 1000/min"
+      duration: "2m"
+      severity: "critical"
+
+# Compliance Configuration
+compliance:
+  enabled: true
+  standards:
+    - "SOC2"
+    - "GDPR"
+    - "PCI-DSS" # For payment processing
+  dataRetention:
+    userdata: 2555 # 7 years
+    auditLogs: 2555 # 7 years
+    backups: 2555 # 7 years
+  dataEncryption:
+    atRest: true
+    inTransit: true
+    keyRotation: 90 # days
+  accessControls:
+    multiFactorAuth: true
+    roleBasedAccess: true
+    principleOfLeastPrivilege: true
+
+# Network Security Configuration
+networkSecurity:
+  enabled: true
+  vpcConfiguration:
+    privateSubnets: true
+    natGateway: true
+    firewallRules:
+      - name: "allow-https"
+        direction: "ingress"
+        ports: ["443"]
+        sources: ["0.0.0.0/0"]
+      
+      - name: "allow-http-redirect"
+        direction: "ingress"
+        ports: ["80"]
+        sources: ["0.0.0.0/0"]
+      
+      - name: "deny-all-other"
+        direction: "ingress"
+        action: "deny"
+        priority: 1000
+  
+  loadBalancer:
+    sslTermination: true
+    healthChecks: true
+    ddosProtection: true
+
+# API Security Configuration
+apiSecurity:
+  enabled: true
+  authentication:
+    jwt:
+      algorithm: "RS256"
+      expirationTime: "1h"
+      refreshTokenExpiration: "7d"
+    apiKeys:
+      encryption: true
+      rotation: 90 # days
+      rateLimit: true
+  authorization:
+    rbac: true
+    resourceBasedAccess: true
+  validation:
+    requestSizeLimit: "10mb"
+    parameterValidation: true
+    schemaValidation: true
+
+# Incident Response Configuration
+incidentResponse:
+  enabled: true
+  escalationMatrix:
+    - level: "low"
+      responseTime: "4h"
+      contacts: ["security-team@company.com"]
+    
+    - level: "medium"
+      responseTime: "1h"
+      contacts: ["security-team@company.com", "on-call@company.com"]
+    
+    - level: "high"
+      responseTime: "15m"
+      contacts: ["security-team@company.com", "on-call@company.com", "management@company.com"]
+    
+    - level: "critical"
+      responseTime: "5m"
+      contacts: ["security-team@company.com", "on-call@company.com", "management@company.com", "ceo@company.com"]
+  
+  automatedResponse:
+    blockSuspiciousIPs: true
+    isolateCompromisedAccounts: true
+    alertExternalServices: true
+    createIncidentTickets: true
