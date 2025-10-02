@@ -24,7 +24,18 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "baseline-cli": "node scripts/baseline-cli.js"
+    "db:test-connection": "tsx scripts/test-db-connection.ts",
+    "baseline-cli": "node scripts/baseline-cli.js",
+    "test:production": "jest --testPathPattern=tests/production --runInBand",
+    "test:ai-provider": "tsx scripts/test-ai-provider.ts",
+    "test:email-service": "tsx scripts/test-email-service.ts",
+    "test:payment-service": "tsx scripts/test-payment-service.ts",
+    "test:load": "jest --testPathPattern=tests/load --runInBand",
+    "test:security": "jest --testPathPattern=tests/security --runInBand",
+    "benchmark:performance": "tsx scripts/performance-benchmark.ts",
+    "load-test": "tsx scripts/load-test.ts",
+    "security-audit": "tsx scripts/security-audit.ts",
+    "validate:production": "tsx scripts/validate-production-environment.ts"
   },
   "dependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
