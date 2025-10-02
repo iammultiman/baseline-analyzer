@@ -53,6 +53,7 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-tabs": "^1.1.13",
+    "@sendgrid/mail": "^8.1.4",
     "bcryptjs": "^2.4.3",
     "chart.js": "^4.5.0",
     "class-variance-authority": "^0.7.1",
@@ -71,14 +72,14 @@
     "react-hook-form": "^7.63.0",
     "recharts": "^3.2.1",
     "sonner": "^2.0.7",
+    "stripe": "^17.4.0",
     "tailwind-merge": "^3.3.1",
-    "zod": "^3.25.76",
-    "@sendgrid/mail": "^8.1.4",
-    "stripe": "^17.4.0"
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@playwright/test": "^1.48.0",
+    "@swc/jest": "^0.2.39",
     "@tailwindcss/postcss": "^4",
     "@testing-library/jest-dom": "^6.8.0",
     "@testing-library/react": "^16.3.0",
