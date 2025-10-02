@@ -4,21 +4,36 @@ import { execSync } from 'child_process'
 const prisma = new PrismaClient()
 
 export async function setupTestDatabase() {
-  // Reset database
-  await prisma.$executeRaw`DROP SCHEMA IF EXISTS public CASCADE`
-  await prisma.$executeRaw`CREATE SCHEMA public`
-  
-  // Run migrations
-  execSync('npx prisma migrate deploy', {
-    env: { ...process.env, DATABASE_URL: process.env.DATABASE_URL },
-  })
-  
-  // Seed test data
-  await seedTestData()
+  try {
+    // Clean up existing data
+    await cleanupTestDatabase()
+    
+    // Seed test data
+    await seedTestData()
+  } catch (error) {
+    console.error('Error setting up test database:', error)
+    throw error
+  }
 }
 
 export async function cleanupTestDatabase() {
-  await prisma.$executeRaw`TRUNCATE TABLE "User", "Organization", "RepositoryAnalysis", "CreditTransaction", "BaselineData" CASCADE`
+  try {
+    // Delete in correct order to respect foreign key constraints
+    await prisma.auditLog.deleteMany()
+    await prisma.webhookDelivery.deleteMany()
+    await prisma.webhook.deleteMany()
+    await prisma.apiKey.deleteMany()
+    await prisma.invitation.deleteMany()
+    await prisma.creditTransaction.deleteMany()
+    await prisma.repositoryAnalysis.deleteMany()
+    await prisma.aIProviderConfig.deleteMany()
+    await prisma.user.deleteMany()
+    await prisma.organization.deleteMany()
+    await prisma.baselineData.deleteMany()
+  } catch (error) {
+    console.error('Error cleaning up test database:', error)
+    // Continue even if cleanup fails
+  }
 }
 
 export async function seedTestData() {
@@ -29,7 +44,6 @@ export async function seedTestData() {
       email: 'test@example.com',
       displayName: 'Test User',
       creditBalance: 100,
-      emailVerified: true,
     },
   })
 
@@ -39,7 +53,7 @@ export async function seedTestData() {
       email: 'admin@example.com',
       displayName: 'Admin User',
       creditBalance: 1000,
-      emailVerified: true,
+      role: 'ADMIN',
     },
   })
 
@@ -64,19 +78,13 @@ export async function seedTestData() {
     },
   })
 
-  // Add test user to organization
-  await prisma.organizationMember.create({
-    data: {
-      userId: testUser.id,
-      organizationId: testOrg.id,
-      role: 'MEMBER',
-    },
-  })
-
   // Update test user with organization
   await prisma.user.update({
     where: { id: testUser.id },
-    data: { organizationId: testOrg.id },
+    data: { 
+      organizationId: testOrg.id,
+      role: 'MEMBER'
+    },
   })
 
   // Create test repository analysis

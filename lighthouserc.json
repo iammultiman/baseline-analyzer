@@ -7,9 +7,6 @@
         "http://localhost:3000/repository-analysis",
         "http://localhost:3000/credits"
       ],
-      "startServerCommand": "npm start",
-      "startServerReadyPattern": "ready on",
-      "startServerReadyTimeout": 30000,
       "numberOfRuns": 3
     },
     "assert": {

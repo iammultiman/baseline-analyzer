@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm run test -- --coverage --watchAll=false --testPathIgnorePatterns="tests/production" --testPathIgnorePatterns="tests/e2e" --testPathIgnorePatterns="tests/load" --passWithNoTests
+        run: npm run test -- --coverage --watchAll=false
         env:
           NODE_ENV: test
           FIREBASE_PROJECT_ID: test-project
@@ -98,7 +98,7 @@ jobs:
           NODE_ENV: test
 
       - name: Run integration tests
-        run: npm run test -- --testPathPattern=integration --coverage --watchAll=false --testPathIgnorePatterns="tests/production" --testPathIgnorePatterns="tests/e2e" --testPathIgnorePatterns="tests/load" --passWithNoTests
+        run: npm run test -- --testPathPattern=integration --coverage --watchAll=false
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
@@ -161,19 +161,24 @@ jobs:
       - name: Build application
         run: npm run build
         env:
-          NODE_ENV: test
+          NODE_ENV: production
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-ci-e2e-testing
+          NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
           FIREBASE_CLIENT_EMAIL: test@test-project.iam.gserviceaccount.com
           FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB\nxIuOAiNQM4+ur5yMjVBqiDdVaM3/VwxbNq37HrfTmhTeRBfWW91xtEtIsmHk9WXL\nUgYkXYP7XZ9j8yd+t6Li2Oyreqlt5Br2AlBo3W7cglRxjTXXXAGBx+sBwIDAQAB\nAoIBABagpxpM1aoLWfvDKHcWxnDddfHBjGphziHkePiMRNuGQN2+3hRwMGJMYlgJ\nOtcXoXxJmxqwhwiU2ckj7158d6fTjuUd9grL6VwcLGRxHstfn5NjjQoaq30cINhw\nwsW3omTRRCWRkfloD3XKVu+2uP71upe9mkihC4M9vqEkUKBWlcTU3hHRoJMHRxDx\nAoGBANjANRKLBtcxmW4foK5ILTuFkuaHgjf661r2r4F3dDdK7xQcTkOhqTGp1lnV\nfqN8cwdwsOp8ck8fX6aTAoGBANWGQDKhPiVZsjbxeXI4y1riX3GJqiNXSyObz+rR\nCIc7KEAXyq9vHWvQBromhCtfwgMH01QcCpz7HnazyvqVAoGBAKfFGI4aEOqW8A+W\n3gNBxqhPiluqFSqABU6pgBYCoGAzrETgjBbqWkx5rQtNObDyGjiBQRzzX1UcMsP9\nk8Smq0wHdnRTnEbRlJ2aR7xd6sMxOGPfyoai80xHaJMhTI5gx4YdCRFBukrxkd6z\nePBHCAFOK4nPEjFMxqCulkxBjEspAoGBAKLlm0oVsVlkPiuRyMPUESlhXpwgOcaL\nwbLLspHEduUkJBFHuigJHusHuSPjVQCXt2mdo7n6wz7dFNXenNTKEe3j5nikitkx\nAoGAQHKyFYuaJwn+CyBgtClDEIMkP4qQxQ2JMfrugsgnfLpXFUrMmPn5nAXAx3IB\nli6uFpbsMoLTTK6Ni79M7jSYOiMg+qrW2xHtPX+o/ufzPpS6bnZBrfzfVZ2Smk0Y\n-----END PRIVATE KEY-----"
 
       - name: Start application in background
-        run: npm start &
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
         env:
-          NODE_ENV: test
+          NODE_ENV: production
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-ci-e2e-testing
+          NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
           FIREBASE_CLIENT_EMAIL: test@test-project.iam.gserviceaccount.com
           FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB\nxIuOAiNQM4+ur5yMjVBqiDdVaM3/VwxbNq37HrfTmhTeRBfWW91xtEtIsmHk9WXL\nUgYkXYP7XZ9j8yd+t6Li2Oyreqlt5Br2AlBo3W7cglRxjTXXXAGBx+sBwIDAQAB\nAoIBABagpxpM1aoLWfvDKHcWxnDddfHBjGphziHkePiMRNuGQN2+3hRwMGJMYlgJ\nOtcXoXxJmxqwhwiU2ckj7158d6fTjuUd9grL6VwcLGRxHstfn5NjjQoaq30cINhw\nwsW3omTRRCWRkfloD3XKVu+2uP71upe9mkihC4M9vqEkUKBWlcTU3hHRoJMHRxDx\nAoGBANjANRKLBtcxmW4foK5ILTuFkuaHgjf661r2r4F3dDdK7xQcTkOhqTGp1lnV\nfqN8cwdwsOp8ck8fX6aTAoGBANWGQDKhPiVZsjbxeXI4y1riX3GJqiNXSyObz+rR\nCIc7KEAXyq9vHWvQBromhCtfwgMH01QcCpz7HnazyvqVAoGBAKfFGI4aEOqW8A+W\n3gNBxqhPiluqFSqABU6pgBYCoGAzrETgjBbqWkx5rQtNObDyGjiBQRzzX1UcMsP9\nk8Smq0wHdnRTnEbRlJ2aR7xd6sMxOGPfyoai80xHaJMhTI5gx4YdCRFBukrxkd6z\nePBHCAFOK4nPEjFMxqCulkxBjEspAoGBAKLlm0oVsVlkPiuRyMPUESlhXpwgOcaL\nwbLLspHEduUkJBFHuigJHusHuSPjVQCXt2mdo7n6wz7dFNXenNTKEe3j5nikitkx\nAoGAQHKyFYuaJwn+CyBgtClDEIMkP4qQxQ2JMfrugsgnfLpXFUrMmPn5nAXAx3IB\nli6uFpbsMoLTTK6Ni79M7jSYOiMg+qrW2xHtPX+o/ufzPpS6bnZBrfzfVZ2Smk0Y\n-----END PRIVATE KEY-----"
@@ -181,14 +186,25 @@ jobs:
 
       - name: Wait for application to start
         run: |
-          timeout 60 bash -c 'until curl -f http://localhost:3000/api/health; do sleep 2; done'
+          echo "Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Application is ready!"
+              exit 0
+            fi
+            echo "Attempt $i: Application not ready yet, waiting..."
+            sleep 2
+          done
+          echo "Application failed to start within 60 seconds"
+          exit 1
 
       - name: Run E2E tests
         run: npm run test:e2e
         env:
-          NODE_ENV: test
+          NODE_ENV: production
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-ci-e2e-testing
+          NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
           PLAYWRIGHT_BASE_URL: http://localhost:3000
 
@@ -262,6 +278,39 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          DATABASE_URL: postgresql://localhost:5432/test
+          NEXTAUTH_SECRET: test-secret-key-for-performance
+          NEXTAUTH_URL: http://localhost:3000
+          FIREBASE_PROJECT_ID: test-project
+          FIREBASE_CLIENT_EMAIL: test@test-project.iam.gserviceaccount.com
+          FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB\nxIuOAiNQM4+ur5yMjVBqiDdVaM3/VwxbNq37HrfTmhTeRBfWW91xtEtIsmHk9WXL\nUgYkXYP7XZ9j8yd+t6Li2Oyreqlt5Br2AlBo3W7cglRxjTXXXAGBx+sBwIDAQAB\nAoIBABagpxpM1aoLWfvDKHcWxnDddfHBjGphziHkePiMRNuGQN2+3hRwMGJMYlgJ\nOtcXoXxJmxqwhwiU2ckj7158d6fTjuUd9grL6VwcLGRxHstfn5NjjQoaq30cINhw\nwsW3omTRRCWRkfloD3XKVu+2uP71upe9mkihC4M9vqEkUKBWlcTU3hHRoJMHRxDx\nAoGBANjANRKLBtcxmW4foK5ILTuFkuaHgjf661r2r4F3dDdK7xQcTkOhqTGp1lnV\nfqN8cwdwsOp8ck8fX6aTAoGBANWGQDKhPiVZsjbxeXI4y1riX3GJqiNXSyObz+rR\nCIc7KEAXyq9vHWvQBromhCtfwgMH01QcCpz7HnazyvqVAoGBAKfFGI4aEOqW8A+W\n3gNBxqhPiluqFSqABU6pgBYCoGAzrETgjBbqWkx5rQtNObDyGjiBQRzzX1UcMsP9\nk8Smq0wHdnRTnEbRlJ2aR7xd6sMxOGPfyoai80xHaJMhTI5gx4YdCRFBukrxkd6z\nePBHCAFOK4nPEjFMxqCulkxBjEspAoGBAKLlm0oVsVlkPiuRyMPUESlhXpwgOcaL\nwbLLspHEduUkJBFHuigJHusHuSPjVQCXt2mdo7n6wz7dFNXenNTKEe3j5nikitkx\nAoGAQHKyFYuaJwn+CyBgtClDEIMkP4qQxQ2JMfrugsgnfLpXFUrMmPn5nAXAx3IB\nli6uFpbsMoLTTK6Ni79M7jSYOiMg+qrW2xHtPX+o/ufzPpS6bnZBrfzfVZ2Smk0Y\n-----END PRIVATE KEY-----"
+
+      - name: Start application in background
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://localhost:5432/test
+          NEXTAUTH_SECRET: test-secret-key-for-performance
+          NEXTAUTH_URL: http://localhost:3000
+          FIREBASE_PROJECT_ID: test-project
+          PORT: 3000
+
+      - name: Wait for application to start
+        run: |
+          echo "Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Application is ready!"
+              exit 0
+            fi
+            echo "Attempt $i: Application not ready yet, waiting..."
+            sleep 2
+          done
+          echo "Application failed to start within 60 seconds"
+          exit 1
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v10
@@ -272,7 +321,6 @@ jobs:
 
       - name: Run bundle analyzer
         run: |
-          npm run build
           npx @next/bundle-analyzer
         env:
           ANALYZE: true
@@ -299,6 +347,41 @@ jobs:
 
       - name: Build application
         run: npm run build
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://localhost:5432/test
+          NEXTAUTH_SECRET: test-secret-key-for-accessibility
+          NEXTAUTH_URL: http://localhost:3000
+          FIREBASE_PROJECT_ID: test-project
+          FIREBASE_CLIENT_EMAIL: test@test-project.iam.gserviceaccount.com
+          FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB\nxIuOAiNQM4+ur5yMjVBqiDdVaM3/VwxbNq37HrfTmhTeRBfWW91xtEtIsmHk9WXL\nUgYkXYP7XZ9j8yd+t6Li2Oyreqlt5Br2AlBo3W7cglRxjTXXXAGBx+sBwIDAQAB\nAoIBABagpxpM1aoLWfvDKHcWxnDddfHBjGphziHkePiMRNuGQN2+3hRwMGJMYlgJ\nOtcXoXxJmxqwhwiU2ckj7158d6fTjuUd9grL6VwcLGRxHstfn5NjjQoaq30cINhw\nwsW3omTRRCWRkfloD3XKVu+2uP71upe9mkihC4M9vqEkUKBWlcTU3hHRoJMHRxDx\nAoGBANjANRKLBtcxmW4foK5ILTuFkuaHgjf661r2r4F3dDdK7xQcTkOhqTGp1lnV\nfqN8cwdwsOp8ck8fX6aTAoGBANWGQDKhPiVZsjbxeXI4y1riX3GJqiNXSyObz+rR\nCIc7KEAXyq9vHWvQBromhCtfwgMH01QcCpz7HnazyvqVAoGBAKfFGI4aEOqW8A+W\n3gNBxqhPiluqFSqABU6pgBYCoGAzrETgjBbqWkx5rQtNObDyGjiBQRzzX1UcMsP9\nk8Smq0wHdnRTnEbRlJ2aR7xd6sMxOGPfyoai80xHaJMhTI5gx4YdCRFBukrxkd6z\nePBHCAFOK4nPEjFMxqCulkxBjEspAoGBAKLlm0oVsVlkPiuRyMPUESlhXpwgOcaL\nwbLLspHEduUkJBFHuigJHusHuSPjVQCXt2mdo7n6wz7dFNXenNTKEe3j5nikitkx\nAoGAQHKyFYuaJwn+CyBgtClDEIMkP4qQxQ2JMfrugsgnfLpXFUrMmPn5nAXAx3IB\nli6uFpbsMoLTTK6Ni79M7jSYOiMg+qrW2xHtPX+o/ufzPpS6bnZBrfzfVZ2Smk0Y\n-----END PRIVATE KEY-----"
+
+      - name: Start application in background
+        run: |
+          npm start &
+          APP_PID=$!
+          echo "APP_PID=$APP_PID" >> $GITHUB_ENV
+        env:
+          NODE_ENV: production
+          DATABASE_URL: postgresql://localhost:5432/test
+          NEXTAUTH_SECRET: test-secret-key-for-accessibility
+          NEXTAUTH_URL: http://localhost:3000
+          FIREBASE_PROJECT_ID: test-project
+          PORT: 3000
+
+      - name: Wait for application to start
+        run: |
+          echo "Waiting for application to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:3000 > /dev/null; then
+              echo "Application is ready!"
+              exit 0
+            fi
+            echo "Attempt $i: Application not ready yet, waiting..."
+            sleep 2
+          done
+          echo "Application failed to start within 60 seconds"
+          exit 1
 
       - name: Run accessibility tests
         run: npx playwright test --grep="accessibility"
