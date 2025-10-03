@@ -51,7 +51,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        image: ankane/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -85,6 +85,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify pgvector extension
+        run: |
+          for i in {1..10}; do
+            if docker exec $(docker ps -q --filter name=postgres) psql -U postgres -d baseline_analyzer_test -c 'CREATE EXTENSION IF NOT EXISTS vector;' >/dev/null 2>&1; then
+              echo "pgvector extension ensured"; break; fi; echo "waiting for postgres..."; sleep 2; done
 
       - name: Setup test database
         run: |
@@ -126,7 +132,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        image: ankane/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -150,6 +156,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify pgvector extension
+        run: |
+          for i in {1..10}; do
+            if docker exec $(docker ps -q --filter name=postgres) psql -U postgres -d baseline_analyzer_test -c 'CREATE EXTENSION IF NOT EXISTS vector;' >/dev/null 2>&1; then
+              echo "pgvector extension ensured"; break; fi; echo "waiting for postgres..."; sleep 2; done
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
@@ -269,7 +281,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        image: ankane/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -293,6 +305,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify pgvector extension
+        run: |
+          for i in {1..10}; do
+            if docker exec $(docker ps -q --filter name=postgres) psql -U postgres -d baseline_analyzer_test -c 'CREATE EXTENSION IF NOT EXISTS vector;' >/dev/null 2>&1; then
+              echo "pgvector extension ensured"; break; fi; echo "waiting for postgres..."; sleep 2; done
 
       - name: Setup test database
         run: |
@@ -359,7 +377,7 @@ jobs:
     
     services:
       postgres:
-        image: postgres:15
+        image: ankane/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -383,6 +401,12 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify pgvector extension
+        run: |
+          for i in {1..10}; do
+            if docker exec $(docker ps -q --filter name=postgres) psql -U postgres -d baseline_analyzer_test -c 'CREATE EXTENSION IF NOT EXISTS vector;' >/dev/null 2>&1; then
+              echo "pgvector extension ensured"; break; fi; echo "waiting for postgres..."; sleep 2; done
 
       - name: Setup test database
         run: |
