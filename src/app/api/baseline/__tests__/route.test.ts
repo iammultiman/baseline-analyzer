@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { GET, POST } from '../route';
 import { baselineDataService } from '@/lib/services/baseline-data-service';
 import { requireAuth } from '@/lib/auth-middleware';
@@ -9,6 +10,12 @@ jest.mock('@/lib/auth-middleware');
 describe('/api/baseline', () => {
   const mockBaselineService = baselineDataService as jest.Mocked<typeof baselineDataService>;
   const mockRequireAuth = requireAuth as jest.MockedFunction<typeof requireAuth>;
+
+  const serializeFeatures = (features: Array<{ lastUpdated: Date }>) =>
+    features.map((feature) => ({
+      ...feature,
+      lastUpdated: feature.lastUpdated.toISOString(),
+    }));
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -29,12 +36,12 @@ describe('/api/baseline', () => {
 
       mockBaselineService.getAllFeatures.mockResolvedValueOnce(mockFeatures);
 
-      const request = new Request('http://localhost/api/baseline');
+  const request = new NextRequest('http://localhost/api/baseline');
       const response = await GET(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.features).toEqual(mockFeatures);
+      expect(data.features).toEqual(serializeFeatures(mockFeatures));
       expect(mockBaselineService.getAllFeatures).toHaveBeenCalledTimes(1);
     });
 
@@ -52,12 +59,12 @@ describe('/api/baseline', () => {
 
       mockBaselineService.getFeaturesByCategory.mockResolvedValueOnce(mockFeatures);
 
-      const request = new Request('http://localhost/api/baseline?category=css');
+  const request = new NextRequest('http://localhost/api/baseline?category=css');
       const response = await GET(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.features).toEqual(mockFeatures);
+      expect(data.features).toEqual(serializeFeatures(mockFeatures));
       expect(mockBaselineService.getFeaturesByCategory).toHaveBeenCalledWith('css');
     });
 
@@ -78,19 +85,27 @@ describe('/api/baseline', () => {
 
       mockBaselineService.searchSimilar.mockResolvedValueOnce(mockResults);
 
-      const request = new Request('http://localhost/api/baseline?query=fetch&limit=5');
+  const request = new NextRequest('http://localhost/api/baseline?query=fetch&limit=5');
       const response = await GET(request);
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.results).toEqual(mockResults);
+      expect(data.results).toEqual(
+        mockResults.map((result) => ({
+          ...result,
+          feature: {
+            ...result.feature,
+            lastUpdated: result.feature.lastUpdated.toISOString(),
+          },
+        }))
+      );
       expect(mockBaselineService.searchSimilar).toHaveBeenCalledWith('fetch', 5);
     });
 
     it('should handle service errors', async () => {
       mockBaselineService.getAllFeatures.mockRejectedValueOnce(new Error('Service error'));
 
-      const request = new Request('http://localhost/api/baseline');
+  const request = new NextRequest('http://localhost/api/baseline');
       const response = await GET(request);
       const data = await response.json();
 
@@ -130,7 +145,7 @@ describe('/api/baseline', () => {
       mockBaselineService.fetchLatestBaseline.mockResolvedValueOnce(mockBaselineSource);
       mockBaselineService.updateVectorDatabase.mockResolvedValueOnce(mockUpdateResult);
 
-      const request = new Request('http://localhost/api/baseline', {
+        const request = new NextRequest('http://localhost/api/baseline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update' }),
@@ -151,7 +166,7 @@ describe('/api/baseline', () => {
         error: 'Unauthorized',
       });
 
-      const request = new Request('http://localhost/api/baseline', {
+      const request = new NextRequest('http://localhost/api/baseline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update' }),
@@ -170,7 +185,7 @@ describe('/api/baseline', () => {
         user: { id: '1', role: 'MEMBER' } as any,
       });
 
-      const request = new Request('http://localhost/api/baseline', {
+        const request = new NextRequest('http://localhost/api/baseline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update' }),
@@ -189,7 +204,7 @@ describe('/api/baseline', () => {
         user: { id: '1', role: 'ADMIN' } as any,
       });
 
-      const request = new Request('http://localhost/api/baseline', {
+        const request = new NextRequest('http://localhost/api/baseline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'invalid' }),
@@ -210,7 +225,7 @@ describe('/api/baseline', () => {
 
       mockBaselineService.fetchLatestBaseline.mockRejectedValueOnce(new Error('Fetch error'));
 
-      const request = new Request('http://localhost/api/baseline', {
+        const request = new NextRequest('http://localhost/api/baseline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update' }),

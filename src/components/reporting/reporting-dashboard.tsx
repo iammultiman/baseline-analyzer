@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { 
   BarChart3, 
@@ -84,7 +83,8 @@ export function ReportingDashboard({ organizationId, userId }: ReportingDashboar
       const data = await response.json();
       setDashboardData(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load dashboard');
+      console.error('Failed to load reporting dashboard data', err);
+      setError('Failed to load dashboard');
     } finally {
       setIsLoading(false);
     }
@@ -166,17 +166,21 @@ export function ReportingDashboard({ organizationId, userId }: ReportingDashboar
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
-            </SelectContent>
-          </Select>
+          <label className="sr-only" htmlFor="reporting-time-range">
+            Time range
+          </label>
+          <select
+            id="reporting-time-range"
+            data-testid="time-range-select"
+            value={timeRange}
+            onChange={(event) => setTimeRange(event.target.value)}
+            className="flex h-10 w-32 items-center rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
+          >
+            <option value="7d">Last 7 days</option>
+            <option value="30d">Last 30 days</option>
+            <option value="90d">Last 90 days</option>
+            <option value="1y">Last year</option>
+          </select>
           <Button onClick={() => handleExportReport('pdf')} variant="outline">
             <Download className="h-4 w-4 mr-2" />
             Export PDF
@@ -192,7 +196,9 @@ export function ReportingDashboard({ organizationId, userId }: ReportingDashboar
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.totalAnalyses}</div>
+            <div className="text-2xl font-bold" data-testid="metric-total-analyses">
+              {dashboardData.totalAnalyses}
+            </div>
             <p className="text-xs text-muted-foreground">
               In the last {timeRange}
             </p>
@@ -205,7 +211,10 @@ export function ReportingDashboard({ organizationId, userId }: ReportingDashboar
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
+            <div
+              className="text-2xl font-bold"
+              data-testid="metric-average-compliance"
+            >
               {Math.round(dashboardData.averageCompliance)}%
             </div>
             <p className="text-xs text-muted-foreground">
@@ -220,7 +229,9 @@ export function ReportingDashboard({ organizationId, userId }: ReportingDashboar
             <Filter className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.topIssues.length}</div>
+            <div className="text-2xl font-bold" data-testid="metric-top-issues">
+              {dashboardData.topIssues.length}
+            </div>
             <p className="text-xs text-muted-foreground">
               Categories identified
             </p>
@@ -233,7 +244,9 @@ export function ReportingDashboard({ organizationId, userId }: ReportingDashboar
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{dashboardData.recentAnalyses.length}</div>
+            <div className="text-2xl font-bold" data-testid="metric-recent-analyses">
+              {dashboardData.recentAnalyses.length}
+            </div>
             <p className="text-xs text-muted-foreground">
               Recent analyses
             </p>

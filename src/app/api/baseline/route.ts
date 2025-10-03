@@ -2,6 +2,16 @@ import { NextRequest, NextResponse } from 'next/server';
 import { baselineDataService } from '@/lib/services/baseline-data-service';
 import { requireAuth } from '@/lib/auth-middleware';
 
+function serializeFeature(feature: any) {
+  return {
+    ...feature,
+    lastUpdated:
+      feature?.lastUpdated instanceof Date
+        ? feature.lastUpdated.toISOString()
+        : feature?.lastUpdated ?? null,
+  };
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,15 +22,24 @@ export async function GET(request: NextRequest) {
     if (query) {
       // Perform similarity search
       const results = await baselineDataService.searchSimilar(query, limit);
-      return NextResponse.json({ results });
+      return NextResponse.json({
+        results: results.map(result => ({
+          ...result,
+          feature: serializeFeature(result.feature),
+        })),
+      });
     } else if (category) {
       // Get features by category
       const features = await baselineDataService.getFeaturesByCategory(category);
-      return NextResponse.json({ features });
+      return NextResponse.json({
+        features: features.map(serializeFeature),
+      });
     } else {
       // Get all features
       const features = await baselineDataService.getAllFeatures();
-      return NextResponse.json({ features });
+      return NextResponse.json({
+        features: features.map(serializeFeature),
+      });
     }
   } catch (error) {
     console.error('Error in baseline API:', error);

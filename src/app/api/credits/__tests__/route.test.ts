@@ -1,15 +1,31 @@
 import { describe, it, expect, jest } from '@jest/globals';
 import { NextRequest } from 'next/server';
-import { GET } from '../route';
 
 // Mock the dependencies
-jest.mock('@/lib/auth-middleware');
-jest.mock('@/lib/tenant-middleware');
-jest.mock('@/lib/services/credit-service');
+jest.mock('@/lib/auth-middleware', () => ({
+  __esModule: true,
+  authMiddleware: jest.fn(),
+}));
 
-import { authMiddleware } from '@/lib/auth-middleware';
-import { tenantMiddleware } from '@/lib/tenant-middleware';
-import { CreditService } from '@/lib/services/credit-service';
+jest.mock('@/lib/tenant-middleware', () => ({
+  __esModule: true,
+  tenantMiddleware: jest.fn(),
+}));
+
+jest.mock('@/lib/services/credit-service', () => ({
+  __esModule: true,
+  CreditService: {
+    getBalance: jest.fn(),
+    getTransactionHistory: jest.fn(),
+    getUsageStats: jest.fn(),
+    checkUsageLimits: jest.fn(),
+  },
+}));
+
+const { authMiddleware } = require('@/lib/auth-middleware');
+const { tenantMiddleware } = require('@/lib/tenant-middleware');
+const { CreditService } = require('@/lib/services/credit-service');
+const { GET } = require('../route');
 
 const mockAuthMiddleware = authMiddleware as jest.MockedFunction<typeof authMiddleware>;
 const mockTenantMiddleware = tenantMiddleware as jest.MockedFunction<typeof tenantMiddleware>;
@@ -22,7 +38,7 @@ describe('/api/credits', () => {
 
   describe('GET', () => {
     it('should return credit balance for authenticated user', async () => {
-      const mockUser = { uid: 'test-user-id', email: 'test@example.com' };
+  const mockUser = { id: 'test-user-id', email: 'test@example.com' };
       
       mockAuthMiddleware.mockResolvedValue({
         success: true,
@@ -47,7 +63,7 @@ describe('/api/credits', () => {
     it('should return 401 for unauthenticated user', async () => {
       mockAuthMiddleware.mockResolvedValue({
         success: false,
-        user: null,
+        user: undefined,
       });
 
       const request = new NextRequest('http://localhost:3000/api/credits');
@@ -59,7 +75,7 @@ describe('/api/credits', () => {
     });
 
     it('should include history when requested', async () => {
-      const mockUser = { uid: 'test-user-id', email: 'test@example.com' };
+  const mockUser = { id: 'test-user-id', email: 'test@example.com' };
       const mockHistory = [
         {
           id: '1',
@@ -88,7 +104,12 @@ describe('/api/credits', () => {
 
       expect(response.status).toBe(200);
       expect(data.balance).toBe(100);
-      expect(data.history).toEqual(mockHistory);
+      expect(data.history).toEqual(
+        mockHistory.map(entry => ({
+          ...entry,
+          createdAt: entry.createdAt.toISOString(),
+        }))
+      );
       expect(mockCreditService.getTransactionHistory).toHaveBeenCalledWith('test-user-id', 20, 0);
     });
   });

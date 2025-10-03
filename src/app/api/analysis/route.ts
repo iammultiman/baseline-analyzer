@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { randomUUID } from 'crypto';
 import { AIAnalysisEngine, AnalysisEngineRequest } from '@/lib/services/ai-analysis-engine';
 import { RepositoryProcessor } from '@/lib/services/repository-processor';
 import { authMiddleware } from '@/lib/auth-middleware';
@@ -8,7 +9,9 @@ import { z } from 'zod';
 
 // Request validation schema
 const submitAnalysisSchema = z.object({
-  repositoryUrl: z.string().url('Invalid repository URL'),
+  repositoryUrl: z
+    .string({ required_error: 'Repository URL is required' })
+    .url('Invalid repository URL'),
   analysisType: z.enum(['compatibility', 'recommendations', 'full']).default('full'),
   priority: z.enum(['low', 'normal', 'high']).default('normal')
 });
@@ -42,10 +45,11 @@ export async function POST(request: NextRequest) {
     const validationResult = submitAnalysisSchema.safeParse(body);
     
     if (!validationResult.success) {
+      const errorMessages = validationResult.error.errors.map(err => err.message);
       return NextResponse.json(
-        { 
-          error: 'Invalid request data',
-          details: validationResult.error.errors
+        {
+          error: errorMessages[0] || 'Invalid request data',
+          details: errorMessages,
         },
         { status: 400 }
       );
@@ -54,23 +58,29 @@ export async function POST(request: NextRequest) {
     const { repositoryUrl, analysisType, priority } = validationResult.data;
 
     // Validate repository URL and accessibility
-    const validation = await RepositoryProcessor.validateRepository(repositoryUrl);
-    if (!validation.isValid) {
+    const repositoryValidation = await RepositoryProcessor.validateRepository(repositoryUrl);
+    if (!repositoryValidation.isValid) {
       return NextResponse.json(
-        { 
-          error: 'Repository validation failed',
-          details: validation.error
+        {
+          error:
+            typeof repositoryValidation.error === 'string'
+              ? repositoryValidation.error
+              : 'Repository validation failed',
+          details: repositoryValidation.error,
         },
         { status: 400 }
       );
     }
 
+    const userId = authResult.user!.id;
+    const organizationId = tenantResult.organizationId!;
+
     // Check if analysis already exists for this repository
     const existingAnalysis = await prisma.repositoryAnalysis.findFirst({
       where: {
         repositoryUrl,
-        userId: authResult.user!.id,
-        organizationId: tenantResult.organizationId!,
+        userId,
+        organizationId,
         status: {
           in: ['PENDING', 'PROCESSING']
         }
@@ -88,48 +98,151 @@ export async function POST(request: NextRequest) {
       );
     }
 
+  const analysisId = randomUUID();
+    const submittedAt = new Date().toISOString();
+    const baseMetadata = {
+      analysisType,
+      priority,
+      submittedAt,
+      repositoryInfo: repositoryValidation.repositoryInfo,
+    };
+
     // Create analysis record in database
-    const analysis = await prisma.repositoryAnalysis.create({
+    await prisma.repositoryAnalysis.create({
       data: {
-        userId: authResult.user!.id,
-        organizationId: tenantResult.organizationId!,
+        id: analysisId,
+        userId,
+        organizationId,
         repositoryUrl,
-        repositoryName: validation.repositoryInfo?.name || 'Unknown Repository',
-        status: 'PENDING',
-        metadata: {
-          analysisType,
-          priority,
-          submittedAt: new Date().toISOString(),
-          repositoryInfo: validation.repositoryInfo
-        }
+        repositoryName: repositoryValidation.repositoryInfo?.name || 'Unknown Repository',
+        status: 'PROCESSING',
+        metadata: baseMetadata,
       }
     });
 
-    // Start asynchronous processing
-    processRepositoryAnalysis(analysis.id, repositoryUrl, analysisType, authResult.user!.id, tenantResult.organizationId!)
-      .catch(error => {
-        console.error('Background analysis processing failed:', error);
-        // Update analysis status to failed
-        prisma.repositoryAnalysis.update({
-          where: { id: analysis.id },
-          data: {
-            status: 'FAILED',
-            metadata: {
-              ...analysis.metadata as any,
-              error: error.message,
-              failedAt: new Date().toISOString()
-            }
-          }
-        }).catch(console.error);
+    const processingJobId = await RepositoryProcessor.processRepository(
+      repositoryUrl,
+      userId,
+      organizationId
+    );
+
+    let jobStatus = RepositoryProcessor.getJobStatus(processingJobId);
+    let attempts = 0;
+    const maxAttempts = 60;
+
+    while (jobStatus && jobStatus.status === 'processing' && attempts < maxAttempts) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      jobStatus = RepositoryProcessor.getJobStatus(processingJobId);
+      attempts++;
+    }
+
+    if (!jobStatus || jobStatus.status !== 'completed' || !jobStatus.result) {
+      await prisma.repositoryAnalysis.update({
+        where: { id: analysisId },
+        data: {
+          status: 'FAILED',
+          metadata: {
+            ...baseMetadata,
+            error: jobStatus?.error || 'Processing failed',
+            failedAt: new Date().toISOString(),
+            processingJobId,
+          },
+        },
       });
 
-    return NextResponse.json({
-      success: true,
-      analysisId: analysis.id,
-      status: 'PENDING',
-      message: 'Analysis submitted successfully',
-      estimatedTime: '2-5 minutes'
-    }, { status: 202 });
+      return NextResponse.json(
+        { error: jobStatus?.error || 'Processing failed' },
+        { status: 500 }
+      );
+    }
+
+    const analysisRequest: AnalysisEngineRequest = {
+      repositoryContent: jobStatus.result,
+      userId,
+      organizationId,
+      analysisType,
+    };
+
+    const analysisValidation = AIAnalysisEngine.validateAnalysisRequest(analysisRequest);
+    if (!analysisValidation.valid) {
+      await prisma.repositoryAnalysis.update({
+        where: { id: analysisId },
+        data: {
+          status: 'FAILED',
+          metadata: {
+            ...baseMetadata,
+            validationErrors: analysisValidation.errors,
+            failedAt: new Date().toISOString(),
+            processingJobId,
+          },
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: 'Invalid analysis request',
+          details: analysisValidation.errors,
+        },
+        { status: 400 }
+      );
+    }
+
+    let analysisResult;
+
+    try {
+      analysisResult = await AIAnalysisEngine.analyzeRepository(analysisRequest);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unknown error';
+      const detail = message.replace(/^Analysis failed:\s*/i, '');
+
+      await prisma.repositoryAnalysis.update({
+        where: { id: analysisId },
+        data: {
+          status: 'FAILED',
+          metadata: {
+            ...baseMetadata,
+            error: detail,
+            failedAt: new Date().toISOString(),
+            processingJobId,
+          },
+        },
+      });
+
+      return NextResponse.json(
+        {
+          error: 'Analysis failed',
+          details: detail,
+        },
+        { status: 500 }
+      );
+    }
+
+    await prisma.repositoryAnalysis.update({
+      where: { id: analysisId },
+      data: {
+        status: 'COMPLETED',
+        creditsCost: analysisResult.creditsCost,
+        results: analysisResult as any,
+        metadata: {
+          ...baseMetadata,
+          ...analysisResult.repositoryMetadata,
+          analysisType,
+          priority,
+          completedAt: new Date().toISOString(),
+          processingJobId,
+        },
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        analysis: analysisResult,
+        processingJobId,
+        analysisId,
+      },
+      { status: 200 }
+    );
 
   } catch (error) {
     const { AnalysisErrorHandler } = await import('@/lib/utils/analysis-error-handler');
@@ -225,91 +338,5 @@ export async function GET(request: NextRequest) {
     AnalysisErrorHandler.logError(error, 'list-analyses');
     const analysisError = AnalysisErrorHandler.handleError(error, 'list-analyses');
     return AnalysisErrorHandler.createErrorResponse(analysisError);
-  }
-}
-
-/**
- * Background processing function for repository analysis
- */
-async function processRepositoryAnalysis(
-  analysisId: string,
-  repositoryUrl: string,
-  analysisType: string,
-  userId: string,
-  organizationId: string
-) {
-  try {
-    // Update status to processing
-    await prisma.repositoryAnalysis.update({
-      where: { id: analysisId },
-      data: {
-        status: 'PROCESSING',
-        metadata: {
-          processingStartedAt: new Date().toISOString()
-        }
-      }
-    });
-
-    // Process repository
-    const jobId = await RepositoryProcessor.processRepository(
-      repositoryUrl,
-      userId,
-      organizationId
-    );
-
-    // Wait for processing to complete
-    let processingJob = RepositoryProcessor.getJobStatus(jobId);
-    let attempts = 0;
-    const maxAttempts = 120; // 10 minutes max wait
-
-    while (processingJob && processingJob.status === 'processing' && attempts < maxAttempts) {
-      await new Promise(resolve => setTimeout(resolve, 5000)); // Wait 5 seconds
-      processingJob = RepositoryProcessor.getJobStatus(jobId);
-      attempts++;
-    }
-
-    if (!processingJob || processingJob.status !== 'completed') {
-      throw new Error(processingJob?.error || 'Repository processing failed or timed out');
-    }
-
-    if (!processingJob.result) {
-      throw new Error('No processing result available');
-    }
-
-    // Perform AI analysis
-    const analysisRequest: AnalysisEngineRequest = {
-      repositoryContent: processingJob.result,
-      userId,
-      organizationId,
-      analysisType: analysisType as any
-    };
-
-    const analysisResult = await AIAnalysisEngine.analyzeRepository(analysisRequest);
-
-    // Update analysis with results
-    await prisma.repositoryAnalysis.update({
-      where: { id: analysisId },
-      data: {
-        status: 'COMPLETED',
-        creditsCost: analysisResult.creditsCost,
-        results: analysisResult as any,
-        metadata: {
-          ...analysisResult.repositoryMetadata,
-          analysisType,
-          completedAt: new Date().toISOString(),
-          processingJobId: jobId
-        }
-      }
-    });
-
-  } catch (error) {
-    const { AnalysisErrorHandler } = await import('@/lib/utils/analysis-error-handler');
-    AnalysisErrorHandler.logError(error, 'background-analysis-processing', { analysisId });
-    const analysisError = AnalysisErrorHandler.handleError(error, 'background-analysis-processing');
-    
-    // Update analysis status with detailed error information
-    await AnalysisErrorHandler.updateAnalysisWithError(analysisId, analysisError, 'processing');
-
-    throw error;
   }
 }

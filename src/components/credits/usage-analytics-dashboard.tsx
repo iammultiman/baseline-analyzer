@@ -156,13 +156,26 @@ export function UsageAnalyticsDashboard() {
       {/* Header with Time Range Selector */}
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">Usage Analytics</h2>
-        <Tabs value={timeRange} onValueChange={(value) => setTimeRange(value as any)}>
-          <TabsList>
-            <TabsTrigger value="7d">7 Days</TabsTrigger>
-            <TabsTrigger value="30d">30 Days</TabsTrigger>
-            <TabsTrigger value="90d">90 Days</TabsTrigger>
-          </TabsList>
-        </Tabs>
+        <div className="inline-flex items-center rounded-md border bg-muted p-1 text-muted-foreground" role="tablist" aria-label="Select time range">
+          {([
+            { value: '7d', label: '7 Days' },
+            { value: '30d', label: '30 Days' },
+            { value: '90d', label: '90 Days' },
+          ] as const).map(({ value, label }) => (
+            <button
+              key={value}
+              type="button"
+              role="tab"
+              aria-selected={timeRange === value}
+              className={`inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 ${
+                timeRange === value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground'
+              }`}
+              onClick={() => setTimeRange(value)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Overview Cards */}

@@ -14,6 +14,11 @@ jest.mock('@/lib/middleware/api-key-auth');
 
 const mockCICDAnalysisService = CICDAnalysisService as jest.Mocked<typeof CICDAnalysisService>;
 
+const serializeAnalysis = (analysis: any) => ({
+  ...analysis,
+  createdAt: analysis.createdAt instanceof Date ? analysis.createdAt.toISOString() : analysis.createdAt,
+});
+
 describe('/api/cicd/analyze', () => {
   const mockApiKeyContext = {
     apiKey: {
@@ -65,7 +70,7 @@ describe('/api/cicd/analyze', () => {
       const data = await response.json();
 
       expect(response.status).toBe(201);
-      expect(data).toEqual(mockAnalysisResponse);
+  expect(data).toEqual(serializeAnalysis(mockAnalysisResponse));
       expect(mockCICDAnalysisService.submitAnalysis).toHaveBeenCalledWith(
         'org-1',
         'user-1',
@@ -163,7 +168,7 @@ describe('/api/cicd/analyze', () => {
       const data = await response.json();
 
       expect(response.status).toBe(200);
-      expect(data.analyses).toEqual(mockAnalyses);
+  expect(data.analyses).toEqual(mockAnalyses.map(serializeAnalysis));
       expect(data.pagination).toEqual({
         limit: 50,
         offset: 0,

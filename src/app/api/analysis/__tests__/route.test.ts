@@ -126,7 +126,13 @@ describe('/api/analysis', () => {
 
       expect(response.status).toBe(200);
       expect(data.success).toBe(true);
-      expect(data.analysis).toEqual(mockAnalysisResult);
+      expect(data.analysis).toEqual({
+        ...mockAnalysisResult,
+        repositoryMetadata: {
+          ...mockAnalysisResult.repositoryMetadata,
+          extractedAt: mockAnalysisResult.repositoryMetadata.extractedAt.toISOString(),
+        },
+      });
       expect(data.processingJobId).toBe('test-job-id');
 
       expect(mockRepositoryProcessor.validateRepository).toHaveBeenCalledWith('https://github.com/test/repo');

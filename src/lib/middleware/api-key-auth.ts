@@ -56,7 +56,7 @@ export function requirePermission(permission: string) {
 }
 
 export function withApiKeyAuth<T extends any[]>(
-  handler: (context: ApiKeyAuthContext, ...args: T) => Promise<Response>,
+  handler: (context: ApiKeyAuthContext, request: NextRequest, ...args: T) => Promise<Response>,
   requiredPermissions: string[] = []
 ) {
   return async (request: NextRequest, ...args: T): Promise<Response> => {
@@ -68,7 +68,7 @@ export function withApiKeyAuth<T extends any[]>(
         requirePermission(permission)(context);
       }
       
-      return await handler(context, ...args);
+  return await handler(context, request, ...args);
     } catch (error) {
       if (error instanceof ApiKeyAuthError) {
         return new Response(

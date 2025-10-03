@@ -13,6 +13,58 @@ process.env.FIREBASE_PROJECT_ID = 'test-project'
 process.env.FIREBASE_CLIENT_EMAIL = 'test@test-project.iam.gserviceaccount.com'
 process.env.FIREBASE_PRIVATE_KEY = '-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC7VJTUt9Us8cKB\nxIuOAiNQM4+ur5yMjVBqiDdVaM3/VwxbNq37HrfTmhTeRBfWW91xtEtIsmHk9WXL\nUgYkXYP7XZ9j8yd+t6Li2Oyreqlt5Br2AlBo3W7cglRxjTXXXAGBx+sBwIDAQAB\nAoIBABagpxpM1aoLWfvDKHcWxnDddfHBjGphziHkePiMRNuGQN2+3hRwMGJMYlgJ\nOtcXoXxJmxqwhwiU2ckj7158d6fTjuUd9grL6VwcLGRxHstfn5NjjQoaq30cINhw\nwsW3omTRRCWRkfloD3XKVu+2uP71upe9mkihC4M9vqEkUKBWlcTU3hHRoJMHRxDx\nAoGBANjANRKLBtcxmW4foK5ILTuFkuaHgjf661r2r4F3dDdK7xQcTkOhqTGp1lnV\nfqN8cwdwsOp8ck8fX6aTAoGBANWGQDKhPiVZsjbxeXI4y1riX3GJqiNXSyObz+rR\nCIc7KEAXyq9vHWvQBromhCtfwgMH01QcCpz7HnazyvqVAoGBAKfFGI4aEOqW8A+W\n3gNBxqhPiluqFSqABU6pgBYCoGAzrETgjBbqWkx5rQtNObDyGjiBQRzzX1UcMsP9\nk8Smq0wHdnRTnEbRlJ2aR7xd6sMxOGPfyoai80xHaJMhTI5gx4YdCRFBukrxkd6z\nePBHCAFOK4nPEjFMxqCulkxBjEspAoGBAKLlm0oVsVlkPiuRyMPUESlhXpwgOcaL\nwbLLspHEduUkJBFHuigJHusHuSPjVQCXt2mdo7n6wz7dFNXenNTKEe3j5nikitkx\nAoGAQHKyFYuaJwn+CyBgtClDEIMkP4qQxQ2JMfrugsgnfLpXFUrMmPn5nAXAx3IB\nli6uFpbsMoLTTK6Ni79M7jSYOiMg+qrW2xHtPX+o/ufzPpS6bnZBrfzfVZ2Smk0Y\n-----END PRIVATE KEY-----'
 
+// Provide PointerEvent for component libraries that rely on it (e.g., Radix UI)
+if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
+  class PointerEventPolyfill extends MouseEvent {
+    constructor(type, params = {}) {
+      super(type, params);
+
+      const reservedKeys = new Set(['bubbles', 'cancelable', 'composed']);
+
+      Object.entries(params || {}).forEach(([key, value]) => {
+        if (reservedKeys.has(key)) {
+          return;
+        }
+
+        try {
+          // Prefer direct assignment when property is writable
+          if (key in this) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore - dynamic assignment for polyfill environment
+            this[key] = value;
+          } else {
+            Object.defineProperty(this, key, {
+              configurable: true,
+              enumerable: true,
+              writable: true,
+              value,
+            });
+          }
+        } catch (error) {
+          // Silently ignore read-only properties
+        }
+      });
+    }
+  }
+
+  window.PointerEvent = PointerEventPolyfill;
+  global.PointerEvent = PointerEventPolyfill;
+}
+
+if (typeof Element !== 'undefined') {
+  if (!Element.prototype.hasPointerCapture) {
+    Element.prototype.hasPointerCapture = () => false;
+  }
+
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = () => {};
+  }
+
+  if (!Element.prototype.releasePointerCapture) {
+    Element.prototype.releasePointerCapture = () => {};
+  }
+}
+
 // Mock Next.js Request and Response
 global.Request = global.Request || class MockRequest {
   constructor(url, options = {}) {
@@ -159,6 +211,7 @@ jest.mock('@prisma/client', () => ({
     },
     repositoryAnalysis: {
       findUnique: jest.fn(),
+      findFirst: jest.fn(),
       findMany: jest.fn(),
       create: jest.fn(),
       update: jest.fn(),

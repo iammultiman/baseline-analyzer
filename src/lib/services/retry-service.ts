@@ -57,9 +57,21 @@ export class RetryService {
    * Check if an error is retryable
    */
   static isRetryableError(error: string, config: RetryConfig = this.defaultConfig): boolean {
-    return config.retryableErrors.some(retryableError => 
-      error.includes(retryableError) || error.toUpperCase().includes(retryableError)
-    );
+    const normalizedError = error.replace(/[\s_-]+/g, '').toUpperCase();
+
+    return config.retryableErrors.some(retryableError => {
+      const normalizedRetryable = retryableError.replace(/[\s_-]+/g, '').toUpperCase();
+
+      if (normalizedError.includes(normalizedRetryable)) {
+        return true;
+      }
+
+      const softenedRetryable = normalizedRetryable
+        .replace(/(ERROR|FAILURE|EXCEPTION)$/u, '')
+        .replace(/[^A-Z]/g, '');
+
+      return softenedRetryable.length > 0 && normalizedError.includes(softenedRetryable);
+    });
   }
 
   /**
@@ -89,7 +101,7 @@ export class RetryService {
     const retryMetadata = this.getRetryMetadata(currentMetadata);
     const attemptNumber = retryMetadata.retryCount + 1;
     const isRetryable = this.isRetryableError(error, config);
-    const canRetry = isRetryable && attemptNumber <= config.maxRetries;
+    const canRetry = isRetryable && attemptNumber < config.maxRetries;
 
     const newAttempt: RetryAttempt = {
       attemptNumber,
@@ -109,8 +121,8 @@ export class RetryService {
       maxRetries: config.maxRetries,
       nextRetryAt: nextRetryAt?.toISOString(),
       attempts: [...retryMetadata.attempts, newAttempt],
-      lastError: error,
-      isRetryable: isRetryable && attemptNumber < config.maxRetries,
+    lastError: error,
+    isRetryable: canRetry,
     };
 
     return {

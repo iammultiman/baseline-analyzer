@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const userId = authResult.user.id ?? (authResult.user as any).uid;
+
     const tenantResult = await tenantMiddleware(request, authResult.user);
     if (!tenantResult.success) {
       return NextResponse.json({ error: tenantResult.error }, { status: 403 });
@@ -24,21 +26,21 @@ export async function GET(request: NextRequest) {
     const historyLimit = parseInt(searchParams.get('limit') || '20');
     const historyOffset = parseInt(searchParams.get('offset') || '0');
 
-    const balance = await CreditService.getBalance(authResult.user.uid);
+    const balance = await CreditService.getBalance(userId);
     
     const response: any = { balance };
 
     if (includeHistory) {
       response.history = await CreditService.getTransactionHistory(
-        authResult.user.uid,
+        userId,
         historyLimit,
         historyOffset
       );
     }
 
     if (includeStats) {
-      response.stats = await CreditService.getUsageStats(authResult.user.uid);
-      response.usageLimits = await CreditService.checkUsageLimits(authResult.user.uid);
+      response.stats = await CreditService.getUsageStats(userId);
+      response.usageLimits = await CreditService.checkUsageLimits(userId);
     }
 
     return NextResponse.json(response);

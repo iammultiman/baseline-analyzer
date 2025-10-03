@@ -267,8 +267,10 @@ export function CreditNotifications() {
                   size="sm"
                   onClick={() => dismissNotification(notification.id)}
                   className="h-6 w-6 p-0"
+                  aria-label="Dismiss notification"
                 >
                   <X className="h-4 w-4" />
+                  <span className="sr-only">Dismiss</span>
                 </Button>
               )}
             </div>

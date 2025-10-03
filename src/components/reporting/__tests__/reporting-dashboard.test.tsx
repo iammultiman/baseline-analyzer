@@ -85,9 +85,9 @@ describe('ReportingDashboard', () => {
       expect(screen.getByText('Reporting Dashboard')).toBeInTheDocument();
     });
 
-    expect(screen.getByText('25')).toBeInTheDocument(); // Total analyses
-    expect(screen.getByText('79%')).toBeInTheDocument(); // Average compliance (rounded)
-    expect(screen.getByText('2')).toBeInTheDocument(); // Top issues count
+  expect(screen.getByTestId('metric-total-analyses')).toHaveTextContent('25');
+  expect(screen.getByTestId('metric-average-compliance')).toHaveTextContent('79%');
+  expect(screen.getByTestId('metric-top-issues')).toHaveTextContent('2');
   });
 
   it('handles API errors gracefully', async () => {
@@ -109,15 +109,21 @@ describe('ReportingDashboard', () => {
       expect(screen.getByText('Reporting Dashboard')).toBeInTheDocument();
     });
 
-    // Find and click the time range selector
-    const timeRangeSelect = screen.getByRole('combobox');
-    fireEvent.click(timeRangeSelect);
+    const timeRangeSelect = screen.getByTestId('time-range-select') as HTMLSelectElement;
 
-    // Should show time range options
+    expect(timeRangeSelect).toBeInTheDocument();
+    expect(timeRangeSelect.value).toBe('30d');
+    expect(Array.from(timeRangeSelect.options).map(option => option.value)).toEqual([
+      '7d',
+      '30d',
+      '90d',
+      '1y',
+    ]);
+
+    fireEvent.change(timeRangeSelect, { target: { value: '7d' } });
+
     await waitFor(() => {
-      expect(screen.getByText('Last 7 days')).toBeInTheDocument();
-      expect(screen.getByText('Last 30 days')).toBeInTheDocument();
-      expect(screen.getByText('Last 90 days')).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('timeRange=7d'));
     });
   });
 
@@ -142,16 +148,22 @@ describe('ReportingDashboard', () => {
     });
 
     // Click on Trends tab
-    fireEvent.click(screen.getByText('Trends'));
-    expect(screen.getByTestId('compliance-trends')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByText('Trends'));
+    await waitFor(() => {
+      expect(screen.getByTestId('compliance-trends')).toBeInTheDocument();
+    });
 
     // Click on Reports tab
-    fireEvent.click(screen.getByText('Reports'));
-    expect(screen.getByTestId('pdf-report-generator')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByText('Reports'));
+    await waitFor(() => {
+      expect(screen.getByTestId('pdf-report-generator')).toBeInTheDocument();
+    });
 
     // Click on Sharing tab
-    fireEvent.click(screen.getByText('Sharing'));
-    expect(screen.getByTestId('report-sharing')).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByText('Sharing'));
+    await waitFor(() => {
+      expect(screen.getByTestId('report-sharing')).toBeInTheDocument();
+    });
   });
 
   it('displays recent analyses correctly', async () => {

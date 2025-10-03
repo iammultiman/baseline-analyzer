@@ -201,7 +201,7 @@ export function AIProviderConfigComponent({ organizationId }: AIProviderConfigPr
             </p>
             <Button onClick={() => setIsCreateDialogOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
-              Add Provider
+              Add First Provider
             </Button>
           </CardContent>
         </Card>

@@ -44,9 +44,14 @@ export function CreditPurchase({ onPurchaseComplete }: CreditPurchaseProps) {
   useEffect(() => {
     if (open) {
       fetchPackages();
-      checkStripeConfiguration();
     }
   }, [open]);
+
+  useEffect(() => {
+    if (open && paymentMode === 'stripe') {
+      checkStripeConfiguration();
+    }
+  }, [open, paymentMode]);
 
   const checkStripeConfiguration = async () => {
     try {
@@ -340,7 +345,12 @@ export function CreditPurchase({ onPurchaseComplete }: CreditPurchaseProps) {
                 ) : (
                   <>
                     <Check className="h-4 w-4 mr-2" />
-                    {paymentMode === 'demo' ? 'Purchase (Demo)' : 'Purchase'}
+                    <span>Purchase</span>
+                    {paymentMode === 'demo' && (
+                      <span aria-hidden="true" className="ml-1 text-xs font-normal">
+                        (Demo)
+                      </span>
+                    )}
                   </>
                 )}
               </Button>
