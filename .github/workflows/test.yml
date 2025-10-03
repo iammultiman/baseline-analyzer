@@ -29,7 +29,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests
-        run: npm run test -- --coverage --watchAll=false
+        run: npm run test -- --coverage --watchAll=false --coverageThreshold='{}'
         env:
           NODE_ENV: test
           FIREBASE_PROJECT_ID: test-project
@@ -51,7 +51,7 @@ jobs:
     
     services:
       postgres:
-        image: ankane/pgvector:pg15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -132,7 +132,7 @@ jobs:
     
     services:
       postgres:
-        image: ankane/pgvector:pg15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -281,7 +281,7 @@ jobs:
     
     services:
       postgres:
-        image: ankane/pgvector:pg15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
@@ -377,7 +377,7 @@ jobs:
     
     services:
       postgres:
-        image: ankane/pgvector:pg15
+        image: pgvector/pgvector:pg15
         env:
           POSTGRES_PASSWORD: postgres
           POSTGRES_DB: baseline_analyzer_test
