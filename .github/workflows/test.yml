@@ -215,6 +215,7 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 30
+          if-no-files-found: ignore
 
       - name: Upload E2E test videos
         uses: actions/upload-artifact@v4
@@ -223,6 +224,7 @@ jobs:
           name: playwright-videos
           path: test-results/
           retention-days: 30
+          if-no-files-found: ignore
 
   security-tests:
     name: Security Tests
@@ -261,6 +263,20 @@ jobs:
     name: Performance Tests
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: baseline_analyzer_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -274,11 +290,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup test database
+        run: |
+          npm run db:migrate:deploy
+          npm run db:seed
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
+          NODE_ENV: test
+
       - name: Build application
         run: npm run build
         env:
           NODE_ENV: production
-          DATABASE_URL: postgresql://localhost:5432/test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-performance
           NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
@@ -292,7 +316,7 @@ jobs:
           echo "APP_PID=$APP_PID" >> $GITHUB_ENV
         env:
           NODE_ENV: production
-          DATABASE_URL: postgresql://localhost:5432/test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-performance
           NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
@@ -329,6 +353,20 @@ jobs:
     name: Accessibility Tests
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: baseline_analyzer_test
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -342,6 +380,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Setup test database
+        run: |
+          npm run db:migrate:deploy
+          npm run db:seed
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
+          NODE_ENV: test
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps
 
@@ -349,7 +395,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          DATABASE_URL: postgresql://localhost:5432/test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-accessibility
           NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
@@ -363,7 +409,7 @@ jobs:
           echo "APP_PID=$APP_PID" >> $GITHUB_ENV
         env:
           NODE_ENV: production
-          DATABASE_URL: postgresql://localhost:5432/test
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test
           NEXTAUTH_SECRET: test-secret-key-for-accessibility
           NEXTAUTH_URL: http://localhost:3000
           FIREBASE_PROJECT_ID: test-project
@@ -394,6 +440,7 @@ jobs:
         with:
           name: accessibility-reports
           path: test-results/accessibility/
+          if-no-files-found: ignore
 
   test-summary:
     name: Test Summary
