@@ -2,6 +2,18 @@ import { PrismaClient, UserRole, TransactionType } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
+const defaultNotificationSettings = {
+  email: {
+    repositoryAnalysis: true,
+    creditLowBalance: true,
+    weeklySummary: false,
+  },
+  inApp: {
+    alerts: true,
+    tips: true,
+  },
+}
+
 async function main() {
   console.log('🌱 Starting database seed...')
 
@@ -14,6 +26,7 @@ async function main() {
       displayName: 'Admin User',
       creditBalance: 1000,
       role: UserRole.ADMIN,
+      notificationSettings: defaultNotificationSettings,
     },
   })
 
@@ -76,12 +89,20 @@ async function main() {
       displayName: 'Test Developer',
       role: UserRole.MEMBER,
       creditBalance: 100,
+      notificationSettings: defaultNotificationSettings,
     },
     {
       email: 'viewer@example.com',
       displayName: 'Test Viewer',
       role: UserRole.VIEWER,
       creditBalance: 50,
+      notificationSettings: {
+        ...defaultNotificationSettings,
+        email: {
+          ...defaultNotificationSettings.email,
+          weeklySummary: true,
+        },
+      },
     },
   ]
 
