@@ -2,16 +2,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/lib/auth-context";
 import { PWANotifications } from "@/components/pwa/pwa-notifications";
-import { Suspense } from "react";
+import { PerformanceMonitorClient } from "@/components/pwa/performance-monitor-client";
 import "./globals.css";
-
-// Lazy load performance monitor for development
-const LazyPerformanceMonitor = dynamic(
-  () => import('@/components/pwa/performance-monitor').then(mod => ({ default: mod.PerformanceMonitor })),
-  { ssr: false }
-);
-
-import dynamic from "next/dynamic";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -61,9 +53,7 @@ export default function RootLayout({
         <AuthProvider>
           {children}
           <PWANotifications />
-          <Suspense fallback={null}>
-            <LazyPerformanceMonitor />
-          </Suspense>
+          <PerformanceMonitorClient />
         </AuthProvider>
       </body>
     </html>
