@@ -1,5 +1,5 @@
 import { render, RenderOptions } from '@testing-library/react'
-import { ReactElement } from 'react'
+import React, { ReactElement } from 'react'
 
 // Mock data generators
 export const mockUser = {
@@ -124,9 +124,8 @@ export const mockApiError = (message: string, status = 500) => ({
 })
 
 // Test wrapper components
-export const TestWrapper = ({ children }: { children: React.ReactNode }) => {
-  return <div data-testid="test-wrapper">{children}</div>
-}
+export const TestWrapper = ({ children }: { children: React.ReactNode }) =>
+  React.createElement('div', { 'data-testid': 'test-wrapper' }, children)
 
 // Custom render function
 export const customRender = (
@@ -170,9 +169,13 @@ export const fillForm = (form: HTMLFormElement, data: Record<string, string>) =>
 // Error boundary test helper
 export const TestErrorBoundary = ({ children }: { children: React.ReactNode }) => {
   try {
-    return <>{children}</>
+    return React.createElement(React.Fragment, null, children)
   } catch (error) {
-    return <div data-testid="error-boundary">Error: {String(error)}</div>
+    return React.createElement(
+      'div',
+      { 'data-testid': 'error-boundary' },
+      `Error: ${String(error)}`
+    )
   }
 }
 

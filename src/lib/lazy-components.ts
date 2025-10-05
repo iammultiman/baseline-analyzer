@@ -2,15 +2,18 @@
  * Lazy-loaded components for code splitting optimization
  */
 
-import { lazy } from 'react';
+import React, { lazy } from 'react';
 import { lazyLoadComponent } from '@/lib/utils/performance-optimizer';
 
-// Loading fallback component
-const LoadingFallback = () => (
-  <div className="flex items-center justify-center p-8">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-  </div>
-);
+// Loading fallback component rendered without JSX to maintain .ts compatibility
+const LoadingFallback = () =>
+  React.createElement(
+    'div',
+    { className: 'flex items-center justify-center p-8' },
+    React.createElement('div', {
+      className: 'animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900'
+    })
+  );
 
 // Admin components (loaded only when needed)
 export const LazyAdminConfig = lazyLoadComponent(

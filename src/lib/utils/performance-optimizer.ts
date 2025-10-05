@@ -3,7 +3,7 @@
  * Provides utilities for code splitting, lazy loading, and performance monitoring
  */
 
-import { lazy, ComponentType } from 'react';
+import React, { lazy, ComponentType } from 'react';
 
 // Performance metrics interface
 export interface PerformanceMetrics {
@@ -18,19 +18,28 @@ export interface PerformanceMetrics {
  * Lazy load component with loading fallback
  */
 export function lazyLoadComponent<T extends ComponentType<any>>(
-  importFunc: () => Promise<{ default: T }>,
+  importFunc: () => Promise<{ default: T }> | Promise<T>,
   fallback?: ComponentType
 ): ComponentType<any> {
-  const LazyComponent = lazy(importFunc);
-  
+  const loader = async () => {
+    const module = await importFunc();
+    if (module && typeof module === 'object' && 'default' in module) {
+      return module as { default: T };
+    }
+    return { default: module as T };
+  };
+
+  const LazyComponent = lazy(loader);
+
   if (fallback) {
-    return (props: any) => (
-      <React.Suspense fallback={<fallback />}>
-        <LazyComponent {...props} />
-      </React.Suspense>
-    );
+    return (props: any) =>
+      React.createElement(
+        React.Suspense,
+        { fallback: React.createElement(fallback) },
+        React.createElement(LazyComponent, props)
+      );
   }
-  
+
   return LazyComponent;
 }
 
@@ -283,16 +292,16 @@ export function analyzeBundleSize(): void {
   console.group('Bundle Analysis');
   
   // Analyze loaded scripts
-  const scripts = Array.from(document.querySelectorAll('script[src]'));
-  scripts.forEach((script: HTMLScriptElement) => {
+  const scripts = Array.from(document.querySelectorAll<HTMLScriptElement>('script[src]'));
+  scripts.forEach((script) => {
     if (script.src.includes('_next/static')) {
       console.log(`Script: ${script.src}`);
     }
   });
   
   // Analyze loaded stylesheets
-  const stylesheets = Array.from(document.querySelectorAll('link[rel="stylesheet"]'));
-  stylesheets.forEach((link: HTMLLinkElement) => {
+  const stylesheets = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]'));
+  stylesheets.forEach((link) => {
     console.log(`Stylesheet: ${link.href}`);
   });
   
