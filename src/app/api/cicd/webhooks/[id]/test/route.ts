@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WebhookService } from '@/lib/services/webhook-service';
-import { authenticateUser } from '@/lib/auth-middleware';
+import { authenticateUser, AuthenticationError } from '@/lib/auth-middleware';
 
 export async function POST(
   request: NextRequest,
@@ -24,6 +24,12 @@ export async function POST(
     });
   } catch (error) {
     console.error('Error testing webhook:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to test webhook' },
       { status: 500 }

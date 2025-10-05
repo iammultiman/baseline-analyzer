@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WebhookService } from '@/lib/services/webhook-service';
-import { authenticateUser } from '@/lib/auth-middleware';
+import { authenticateUser, AuthenticationError } from '@/lib/auth-middleware';
 
 export async function GET(
   request: NextRequest,
@@ -28,6 +28,12 @@ export async function GET(
     return NextResponse.json({ deliveries });
   } catch (error) {
     console.error('Error fetching webhook deliveries:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to fetch webhook deliveries' },
       { status: 500 }

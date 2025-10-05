@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyService } from '@/lib/services/api-key-service';
 import { API_PERMISSIONS } from '@/lib/types/cicd';
-import { authenticateUser } from '@/lib/auth-middleware';
+import { authenticateUser, AuthenticationError } from '@/lib/auth-middleware';
 
 export async function PATCH(
   request: NextRequest,
@@ -50,6 +50,12 @@ export async function PATCH(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error updating API key:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to update API key' },
       { status: 500 }
@@ -76,6 +82,12 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error revoking API key:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to revoke API key' },
       { status: 500 }

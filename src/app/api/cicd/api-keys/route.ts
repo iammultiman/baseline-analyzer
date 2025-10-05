@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiKeyService } from '@/lib/services/api-key-service';
 import { CreateApiKeyRequest, API_PERMISSIONS } from '@/lib/types/cicd';
-import { authenticateUser } from '@/lib/auth-middleware';
+import { authenticateUser, AuthenticationError } from '@/lib/auth-middleware';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +22,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching API keys:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to fetch API keys' },
       { status: 500 }
@@ -76,6 +82,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(apiKey, { status: 201 });
   } catch (error) {
     console.error('Error creating API key:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to create API key' },
       { status: 500 }

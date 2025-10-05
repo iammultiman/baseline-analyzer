@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { WebhookService } from '@/lib/services/webhook-service';
 import { CreateWebhookRequest, WEBHOOK_EVENTS } from '@/lib/types/cicd';
-import { authenticateUser } from '@/lib/auth-middleware';
+import { authenticateUser, AuthenticationError } from '@/lib/auth-middleware';
 
 export async function GET(request: NextRequest) {
   try {
@@ -22,6 +22,12 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching webhooks:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to fetch webhooks' },
       { status: 500 }
@@ -68,6 +74,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(webhook, { status: 201 });
   } catch (error) {
     console.error('Error creating webhook:', error);
+    if (error instanceof AuthenticationError) {
+      return NextResponse.json(
+        { error: error.message },
+        { status: error.status }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to create webhook' },
       { status: 500 }

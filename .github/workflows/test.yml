@@ -106,7 +106,7 @@ jobs:
           NODE_ENV: test
 
       - name: Run integration tests
-        run: npm run test -- --testPathPattern=integration --coverage --watchAll=false
+        run: npm run test -- --testPathPatterns integration --coverage --watchAll=false
         env:
           NODE_ENV: test
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/baseline_analyzer_test

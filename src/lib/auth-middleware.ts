@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import type { Organization, UserRole } from '@prisma/client';
+import { prisma } from '@/lib/database';
 
 // Initialize Firebase Admin SDK
 if (!getApps().length) {
@@ -103,3 +105,64 @@ export async function authMiddleware(request: NextRequest): Promise<{
 // Alias for backward compatibility
 export const verifyAuth = verifyAuthToken;
 export const requireAuth = authMiddleware;
+
+export interface AuthenticatedUserContext {
+  user: {
+    id: string;
+    email: string;
+    role: UserRole;
+  };
+  organizationId: string | null;
+  organization?: Pick<Organization, 'id' | 'name' | 'slug' | 'ownerId' | 'settings'>;
+  isOrganizationOwner: boolean;
+}
+
+export class AuthenticationError extends Error {
+  status: number;
+
+  constructor(message: string, status: number = 401) {
+    super(message);
+    this.name = 'AuthenticationError';
+    this.status = status;
+  }
+}
+
+export async function authenticateUser(request: NextRequest): Promise<AuthenticatedUserContext> {
+  const authResult = await authMiddleware(request);
+
+  if (!authResult.success || !authResult.user) {
+    throw new AuthenticationError(authResult.error || 'Unauthorized');
+  }
+
+  const userRecord = await prisma.user.findUnique({
+    where: { id: authResult.user.id },
+    include: {
+      organization: true,
+    },
+  });
+
+  if (!userRecord) {
+    throw new AuthenticationError('User not found', 404);
+  }
+
+  const organization = userRecord.organization
+    ? {
+        id: userRecord.organization.id,
+        name: userRecord.organization.name,
+        slug: userRecord.organization.slug,
+        ownerId: userRecord.organization.ownerId,
+        settings: userRecord.organization.settings,
+      }
+    : undefined;
+
+  return {
+    user: {
+      id: userRecord.id,
+      email: userRecord.email,
+      role: userRecord.role,
+    },
+    organizationId: organization?.id ?? null,
+    organization,
+    isOrganizationOwner: organization?.ownerId === userRecord.id,
+  };
+}
