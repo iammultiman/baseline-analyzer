@@ -1,6 +1,7 @@
 {
   "name": "Baseline Analyzer Demo",
-  "image": "mcr.microsoft.com/devcontainers/node:18",
+  // Switched to universal image to avoid node:18 retrieval issues in Codespaces startup logs.
+  "image": "mcr.microsoft.com/devcontainers/universal:2",
   "features": {
     "ghcr.io/devcontainers/features/git:1": {},
     "ghcr.io/devcontainers/features/github-cli:1": {}
@@ -18,7 +19,9 @@
     }
   },
   "forwardPorts": [3000],
-  "postCreateCommand": "npm ci && npx prisma db push && npm run dev",
+  "postCreateCommand": "npm ci && npx prisma db push || true",
+  // Start dev server separately so Codespaces doesn't fail the build if dev can't start immediately.
+  "postStartCommand": "npm run dev",
   "remoteEnv": {
     "NEXT_PUBLIC_DEMO_MODE": "true",
     "DATABASE_URL": "file:./dev.db"

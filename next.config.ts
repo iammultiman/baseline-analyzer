@@ -2,6 +2,9 @@ import type { NextConfig } from "next";
 import withPWA from "@ducanh2912/next-pwa";
 
 const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+const isGitHubPages = process.env.GITHUB_PAGES === 'true';
+// Repository name used for GitHub Pages project site basePath.
+const repoName = 'baseline-analyzer';
 
 const nextConfig: NextConfig = {
   output: isDemo ? 'export' : 'standalone',
@@ -21,6 +24,14 @@ const nextConfig: NextConfig = {
       }
     : undefined,
 };
+
+// Apply GitHub Pages basePath & assetPrefix only for static demo build on gh-pages.
+if (isDemo && isGitHubPages) {
+  // basePath ensures all Next.js generated asset URLs point under /baseline-analyzer.
+  // assetPrefix mirrors basePath for consistency with PWA assets.
+  (nextConfig as any).basePath = `/${repoName}`;
+  (nextConfig as any).assetPrefix = `/${repoName}/`;
+}
 
 export default withPWA({
   dest: "public",
@@ -146,14 +157,16 @@ export default withPWA({
     ],
     navigateFallback: '/offline',
     navigateFallbackDenylist: [/^\/_/, /\/[^/?]+\.[^/]+$/],
+    // Use relative URL so it works with or without a basePath (GitHub Pages).
     additionalManifestEntries: [
       {
-        url: '/offline',
+        url: 'offline',
         revision: `${Date.now()}`,
       },
     ],
   },
   fallbacks: {
-    document: '/offline',
+    // Relative so basePath-aware.
+    document: 'offline',
   },
 })(nextConfig);
