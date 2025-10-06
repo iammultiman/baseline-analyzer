@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { IS_DEMO } from '@/lib/isDemo';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,18 @@ interface InvitationData {
 }
 
 export default function AcceptInvitationPage() {
+  if (IS_DEMO) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-semibold mb-2">Invitations Disabled</h1>
+            <p className="text-sm text-muted-foreground">
+              Organization invitations are not available in the static demo.
+            </p>
+        </div>
+      </div>
+    );
+  }
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();

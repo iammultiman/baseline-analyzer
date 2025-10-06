@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { IS_DEMO } from '@/lib/isDemo';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -45,6 +46,18 @@ interface SharedReportData {
 }
 
 export default function SharedReportPage({ params }: SharedReportPageProps) {
+  if (IS_DEMO) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-8 text-center">
+        <div>
+          <h1 className="text-2xl font-semibold mb-2">Shared Reports Disabled</h1>
+          <p className="text-sm text-muted-foreground max-w-md">
+            Dynamic shared report viewing is not available in the static demo build.
+          </p>
+        </div>
+      </div>
+    );
+  }
   const [reportData, setReportData] = useState<SharedReportData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

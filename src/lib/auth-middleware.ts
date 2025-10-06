@@ -1,22 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuth } from 'firebase-admin/auth';
 import { initializeApp, getApps, cert } from 'firebase-admin/app';
+const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 import type { Organization, UserRole } from '@prisma/client';
 import { prisma } from '@/lib/database';
 
 // Initialize Firebase Admin SDK
-if (!getApps().length) {
-  initializeApp({
-    credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    }),
-  });
+if (!IS_DEMO) {
+  if (!getApps().length) {
+    initializeApp({
+      credential: cert({
+        projectId: process.env.FIREBASE_PROJECT_ID,
+        clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+        privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\n/g, '\n'),
+      }),
+    });
+  }
 }
 
 export async function verifyAuthToken(request: NextRequest): Promise<{ uid: string; email: string } | null> {
   try {
+    if (IS_DEMO) {
+      return { uid: 'demo-user', email: 'demo@example.com' };
+    }
     const authHeader = request.headers.get('authorization');
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -128,6 +134,13 @@ export class AuthenticationError extends Error {
 }
 
 export async function authenticateUser(request: NextRequest): Promise<AuthenticatedUserContext> {
+  if (IS_DEMO) {
+    return {
+      user: { id: 'demo-user', email: 'demo@example.com', role: 'ADMIN' as UserRole },
+      organizationId: null,
+      isOrganizationOwner: true,
+    } as AuthenticatedUserContext;
+  }
   const authResult = await authMiddleware(request);
 
   if (!authResult.success || !authResult.user) {

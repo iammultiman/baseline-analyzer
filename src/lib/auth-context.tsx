@@ -14,6 +14,7 @@ import {
   sendPasswordResetEmail,
 } from 'firebase/auth';
 import { auth } from './firebase';
+const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 interface AuthContextType {
   user: User | null;
@@ -45,10 +46,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (IS_DEMO) {
+      // Synthetic demo user (not authenticated server-side)
+      setUser({
+        uid: 'demo-user',
+        email: 'demo@example.com',
+        displayName: 'Demo User',
+      } as unknown as User);
+      setLoading(false);
+      return;
+    }
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
-      
-      // If user just signed in, ensure they're registered in our database
       if (user) {
         try {
           const token = await user.getIdToken();
@@ -66,14 +75,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
           console.error('Failed to complete user registration:', error);
         }
       }
-      
       setLoading(false);
     });
-
     return unsubscribe;
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    if (IS_DEMO) return; // no-op in demo
     try {
       await signInWithEmailAndPassword(auth, email, password);
     } catch (error) {
@@ -82,6 +90,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signUp = async (email: string, password: string, displayName?: string) => {
+    if (IS_DEMO) return; // no-op in demo
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email, password);
       
@@ -99,6 +108,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const signInWithGoogle = async () => {
+    if (IS_DEMO) return; // no-op in demo
     try {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
@@ -108,6 +118,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const logout = async () => {
+    if (IS_DEMO) return; // no-op in demo
     try {
       await signOut(auth);
     } catch (error) {
@@ -116,6 +127,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const resetPassword = async (email: string) => {
+    if (IS_DEMO) return; // no-op in demo
     try {
       await sendPasswordResetEmail(auth, email);
     } catch (error) {
@@ -124,6 +136,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   };
 
   const sendVerificationEmail = async () => {
+    if (IS_DEMO) return; // no-op in demo
     try {
       if (user) {
         await sendEmailVerification(user);

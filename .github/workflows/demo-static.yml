@@ -1,0 +1,40 @@
+name: Demo Static Build
+
+on:
+  push:
+    branches: [ demo-static ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Build (Demo Mode)
+        env:
+          NEXT_PUBLIC_DEMO_MODE: 'true'
+        run: npm run build:demo
+
+      - name: Add .nojekyll
+        run: echo > out/.nojekyll
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          publish_dir: ./out
+          publish_branch: gh-pages
+          github_token: ${{ secrets.GITHUB_TOKEN }}

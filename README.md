@@ -125,3 +125,54 @@ The following APIs need to be enabled:
 ## License
 
 This project is licensed under the MIT License.
+
+## Demo Mode (Static GitHub Pages)
+
+You can publish a static, authentication-free demo that showcases synthetic analysis data.
+
+### Build Locally
+
+```bash
+npm run build:demo
+npx serve out
+```
+
+### Deploy via GitHub Actions
+
+Push to the `demo-static` branch (or run the workflow manually) to publish to `gh-pages`:
+
+```bash
+git checkout -b demo-static
+git push origin demo-static
+# Trigger the Demo Static Build workflow
+```
+
+The site will be available at: `https://<your-username>.github.io/baseline-analyzer/`
+
+### What Demo Mode Does
+| Capability | In Demo |
+|------------|---------|
+| Auth / Sign In | Disabled |
+| Repository Analysis | Mocked |
+| Credit Purchases | Disabled |
+| Charts / Scores | Synthetic fixtures |
+
+Environment flag: `NEXT_PUBLIC_DEMO_MODE=true`.
+
+## Codespaces Live Demo
+
+Launch a live development environment (Next.js dev server + SQLite) with one click:
+
+[![Open in GitHub Codespaces](https://github.com/codespaces/badge.svg)](https://codespaces.new/iammultiman/baseline-analyzer)
+
+### What Happens Automatically
+1. Dependencies install (`npm ci`)
+2. Prisma schema is pushed (SQLite dev.db)
+3. Dev server starts on port 3000
+
+### Customizing
+Add data seeding or switch to Postgres by editing `.devcontainer/devcontainer.json`.
+
+## Preview Environments (Optional Next Step)
+
+For dynamic previews (Cloud Run per PR) add a workflow similar to `demo-static.yml` but deploying the container.

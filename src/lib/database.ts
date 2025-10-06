@@ -1,19 +1,23 @@
 import { PrismaClient } from '@prisma/client'
 import { Pool } from 'pg'
 
+const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
+
 // Prisma Client Singleton
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-  datasources: {
-    db: {
-      url: process.env.DATABASE_URL,
-    },
-  },
-})
+export const prisma = IS_DEMO
+  ? ({} as unknown as PrismaClient) // Stub in demo mode
+  : (globalForPrisma.prisma ?? new PrismaClient({
+      log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+      datasources: {
+        db: {
+          url: process.env.DATABASE_URL,
+        },
+      },
+    }))
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
 
@@ -22,13 +26,18 @@ const globalForPool = globalThis as unknown as {
   pool: Pool | undefined
 }
 
-export const pool = globalForPool.pool ?? new Pool({
-  connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in the pool
-  idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-  connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-  maxUses: 7500, // Close (and replace) a connection after it has been used 7500 times
-})
+export const pool = IS_DEMO
+  ? ({
+      query: async () => [],
+      end: async () => undefined,
+    } as unknown as Pool)
+  : (globalForPool.pool ?? new Pool({
+      connectionString: process.env.DATABASE_URL,
+      max: 20,
+      idleTimeoutMillis: 30000,
+      connectionTimeoutMillis: 2000,
+      maxUses: 7500,
+    }))
 
 if (process.env.NODE_ENV !== 'production') globalForPool.pool = pool
 
@@ -165,16 +174,18 @@ export class DatabaseConnection {
 }
 
 // Graceful shutdown handling
-process.on('beforeExit', async () => {
-  await DatabaseConnection.closeConnections()
-})
+if (!IS_DEMO) {
+  process.on('beforeExit', async () => {
+    await DatabaseConnection.closeConnections()
+  })
 
-process.on('SIGINT', async () => {
-  await DatabaseConnection.closeConnections()
-  process.exit(0)
-})
+  process.on('SIGINT', async () => {
+    await DatabaseConnection.closeConnections()
+    process.exit(0)
+  })
 
-process.on('SIGTERM', async () => {
-  await DatabaseConnection.closeConnections()
-  process.exit(0)
-})
+  process.on('SIGTERM', async () => {
+    await DatabaseConnection.closeConnections()
+    process.exit(0)
+  })
+}

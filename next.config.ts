@@ -1,11 +1,25 @@
 import type { NextConfig } from "next";
 import withPWA from "@ducanh2912/next-pwa";
 
+const isDemo = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+
 const nextConfig: NextConfig = {
-  output: 'standalone',
+  output: isDemo ? 'export' : 'standalone',
   experimental: {
     optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
   },
+  eslint: isDemo
+    ? {
+        // Allow static demo build even if lint errors exist.
+        ignoreDuringBuilds: true,
+      }
+    : undefined,
+  typescript: isDemo
+    ? {
+        // Ignore type errors for demo-only static showcase build.
+        ignoreBuildErrors: true,
+      }
+    : undefined,
 };
 
 export default withPWA({

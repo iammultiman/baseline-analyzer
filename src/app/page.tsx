@@ -3,6 +3,7 @@
 import { useAuth } from '@/lib/auth-context';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { IS_DEMO } from '@/lib/isDemo';
 import Link from 'next/link';
 
 export default function Home() {
@@ -29,6 +30,11 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
+      {IS_DEMO && (
+        <div className="w-full bg-yellow-400 text-gray-900 text-center py-2 text-sm font-medium">
+          Demo Mode: Synthetic data, authentication disabled.
+        </div>
+      )}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col justify-center min-h-screen py-12">
           <div className="text-center">

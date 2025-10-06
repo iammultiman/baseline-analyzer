@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+  "build:demo": "node scripts/build-demo.js",
     "start": "next start",
     "lint": "eslint",
     "test": "jest",
@@ -99,6 +100,7 @@
     "tailwindcss": "^4",
     "ts-jest": "^29.4.4",
     "tsx": "^4.19.2",
+    "cross-env": "^7.0.3",
     "typescript": "^5"
   }
 }

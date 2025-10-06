@@ -1,10 +1,14 @@
 import Stripe from 'stripe';
 import { CreditPackage } from './credit-service';
+const IS_DEMO = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
 
 // Initialize Stripe
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2024-12-18.acacia',
-});
+const stripe = IS_DEMO
+  ? ({} as unknown as Stripe)
+  : new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+      // Use currently supported API version (update as needed)
+      apiVersion: '2025-02-24.acacia',
+    });
 
 export interface PaymentIntent {
   id: string;
@@ -49,6 +53,15 @@ export class PaymentService {
     userId: string,
     organizationId?: string
   ): Promise<PaymentIntent> {
+    if (IS_DEMO) {
+      return {
+        id: 'demo-payment-intent',
+        clientSecret: 'demo-client-secret',
+        amount: creditPackage.price,
+        currency: 'usd',
+        status: 'succeeded',
+      };
+    }
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('Stripe secret key not configured');
     }
@@ -67,7 +80,7 @@ export class PaymentService {
       const paymentIntent = await stripe.paymentIntents.create({
         amount: creditPackage.price, // Amount in cents
         currency: 'usd',
-        metadata: metadata as Record<string, string>,
+  metadata: (metadata as unknown) as Record<string, string>,
         description: `Credit purchase: ${creditPackage.name} (${creditPackage.credits} credits)`,
         automatic_payment_methods: {
           enabled: true,
@@ -91,6 +104,16 @@ export class PaymentService {
    * Retrieve payment intent
    */
   async getPaymentIntent(paymentIntentId: string): Promise<Stripe.PaymentIntent> {
+    if (IS_DEMO) {
+      return {
+        id: paymentIntentId,
+        object: 'payment_intent',
+        amount: 1000,
+        currency: 'usd',
+        status: 'succeeded',
+        metadata: {},
+      } as unknown as Stripe.PaymentIntent;
+    }
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('Stripe secret key not configured');
     }
@@ -110,6 +133,16 @@ export class PaymentService {
     paymentIntentId: string,
     paymentMethodId?: string
   ): Promise<Stripe.PaymentIntent> {
+    if (IS_DEMO) {
+      return {
+        id: paymentIntentId,
+        object: 'payment_intent',
+        amount: 1000,
+        currency: 'usd',
+        status: 'succeeded',
+        metadata: {},
+      } as unknown as Stripe.PaymentIntent;
+    }
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('Stripe secret key not configured');
     }
@@ -135,6 +168,9 @@ export class PaymentService {
     payload: string | Buffer,
     signature: string
   ): Promise<WebhookEvent> {
+    if (IS_DEMO) {
+      return { id: 'demo-event', type: 'demo.event', data: { object: {} } };
+    }
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
       throw new Error('Stripe webhook secret not configured');
     }
@@ -179,6 +215,15 @@ export class PaymentService {
     amount?: number,
     reason?: string
   ): Promise<Stripe.Refund> {
+    if (IS_DEMO) {
+      return {
+        id: 'demo-refund',
+        object: 'refund',
+        amount: amount || 1000,
+        currency: 'usd',
+        status: 'succeeded',
+      } as unknown as Stripe.Refund;
+    }
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('Stripe secret key not configured');
     }
@@ -207,6 +252,9 @@ export class PaymentService {
    * Get payment methods for a customer
    */
   async getPaymentMethods(customerId: string): Promise<Stripe.PaymentMethod[]> {
+    if (IS_DEMO) {
+      return [];
+    }
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('Stripe secret key not configured');
     }
@@ -232,6 +280,13 @@ export class PaymentService {
     email: string,
     name?: string
   ): Promise<Stripe.Customer> {
+    if (IS_DEMO) {
+      return {
+        id: 'demo-customer',
+        object: 'customer',
+        email,
+      } as unknown as Stripe.Customer;
+    }
     if (!process.env.STRIPE_SECRET_KEY) {
       throw new Error('Stripe secret key not configured');
     }
@@ -265,10 +320,8 @@ export class PaymentService {
    * Check if Stripe is configured
    */
   isConfigured(): boolean {
-    return !!(
-      process.env.STRIPE_SECRET_KEY &&
-      process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
-    );
+    if (IS_DEMO) return true;
+    return !!(process.env.STRIPE_SECRET_KEY && process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
   }
 }
 

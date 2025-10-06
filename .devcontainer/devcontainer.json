@@ -1,0 +1,32 @@
+{
+  "name": "Baseline Analyzer Demo",
+  "image": "mcr.microsoft.com/devcontainers/node:18",
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shellIntegration.enabled": true
+      },
+      "extensions": [
+        "Prisma.prisma",
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ]
+    }
+  },
+  "forwardPorts": [3000],
+  "postCreateCommand": "npm ci && npx prisma db push && npm run dev",
+  "remoteEnv": {
+    "NEXT_PUBLIC_DEMO_MODE": "true",
+    "DATABASE_URL": "file:./dev.db"
+  },
+  "portsAttributes": {
+    "3000": {
+      "label": "Web App",
+      "onAutoForward": "openBrowser"
+    }
+  }
+}
