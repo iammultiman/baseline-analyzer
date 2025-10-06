@@ -149,6 +149,20 @@ git push origin demo-static
 
 The site will be available at: `https://<your-username>.github.io/baseline-analyzer/`
 
+### GitHub Pages Base Path
+When deploying to a project site (username.github.io/reponame), asset URLs must include the repo folder. The build workflow sets `GITHUB_PAGES=true` which causes `next.config.ts` to apply:
+
+```
+basePath = /baseline-analyzer
+assetPrefix = /baseline-analyzer/
+```
+
+If you fork/rename the repository, either:
+1. Set `GITHUB_PAGES=true` and change the `repoName` constant in `next.config.ts`, or
+2. Export `NEXT_PUBLIC_DEMO_MODE=true GITHUB_PAGES=true REPO_NAME=your-repo` and adjust the config to read from `process.env.REPO_NAME` (future enhancement).
+
+Service worker and offline fallback URLs were made relative so they work with or without a basePath.
+
 ### What Demo Mode Does
 | Capability | In Demo |
 |------------|---------|
@@ -169,6 +183,9 @@ Launch a live development environment (Next.js dev server + SQLite) with one cli
 1. Dependencies install (`npm ci`)
 2. Prisma schema is pushed (SQLite dev.db)
 3. Dev server starts on port 3000
+
+### Container Image Note
+Originally the devcontainer used `mcr.microsoft.com/devcontainers/node:18`, but provisioning intermittently failed in Codespaces (`docker inspect` error). It now uses the broader `mcr.microsoft.com/devcontainers/universal:2` image for reliability. If you need a slimmer image, change the `image` field or introduce a Dockerfile pinning a digest.
 
 ### Customizing
 Add data seeding or switch to Postgres by editing `.devcontainer/devcontainer.json`.
